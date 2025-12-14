@@ -24,7 +24,7 @@ Possible arguments:
 ### Nelder-Mead Simplex
 
 ```bash
-python eval_ares.py --optimizer=NM -s=50 --task=matched_prior_newtask
+python eval_ares.py --optimizer=NM -s=200 --task=matched_prior_newtask
 ```
 
 ### Normal BO with UCB and Zero Mean
