@@ -6,7 +6,7 @@ Here we use the BO implementation from the Xopt package.
 
 ## Folder Structure
 
-- `bo_cheetah_prior.py` Single file implementation of the example
+- `bo_cheetah_prior_ares.py` Single file implementation of the example
   - `ares_problem` Wraps around a FODO focusing task to be conformed with the Xopt requirements.
   - `AresPriorMean` is the mean module for BO. Note: the forward speed is currently slow due to the non-batched evaluation. (This is planned to be improved in future Cheetah versions.)
 - `eval_ares.py` runs evaluation with different conditions. See below.
@@ -30,11 +30,11 @@ python eval_ares.py --optimizer=NM -s=50 --task=matched_prior_newtask
 ### Normal BO with UCB and Zero Mean
 
 ```bash
-python eval_ares.py --optimizer=BO -s=50 --task=matched_prior_newtask
+python eval_ares.py --optimizer=BO -s=200 --task=matched_prior_newtask
 ```
 
 ### BO with Cheetah Model as Prior Mean
 
 ```bash
-python eval_ares.py --optimizer=BO_prior -s=50 --task=matched_prior_newtask
+python eval_ares.py --optimizer=BO_prior -s=200 --task=matched_prior_newtask
 ```

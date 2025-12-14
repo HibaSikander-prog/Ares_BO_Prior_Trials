@@ -3,26 +3,34 @@ from typing import Dict, Optional
 import cheetah
 import torch
 import torch.nn as nn
+from gpytorch.constraints.constraints import Interval
 from gpytorch.means import Mean
 from gpytorch.priors import SmoothedBoxPrior
 
 
-# Test Problem
+# ARES Problem
 def ares_problem(
     input_param: Dict[str, float],
-    incoming_beam:  Optional[cheetah.Beam] = None,
-    lattice_config: Optional[Dict[str, float]] = {},
-) -> Dict[str, float]: 
+    incoming_beam: Optional[cheetah.Beam] = None,
+    misalignment_config: Optional[Dict[str, tuple]] = None,
+) -> Dict[str, float]:
     """
-    ARES lattice optimization problem.
+    Simulate ARES accelerator and return beam quality metrics.
     
     Args:
-        input_param: Dictionary with keys 'q1', 'q2', 'q3', 'cv', 'ch'
-        incoming_beam: Optional beam configuration
-        lattice_config: Optional dictionary with misalignment values for elements
+        input_param: Dictionary with magnet strengths
+            - q1: AREAMQZM1 strength
+            - q2: AREAMQZM2 strength
+            - cv: AREAMCVM1 angle (vertical corrector)
+            - q3: AREAMQZM3 strength
+            - ch: AREAMCHM1 angle (horizontal corrector)
+        incoming_beam:  Beam parameters (uses default if None)
+        misalignment_config: Dictionary with misalignments for each quadrupole
+            - Format: {"AREAMQZM1": (x, y), "AREAMQZM2": (x, y), "AREAMQZM3": (x, y)}
+            - Units: meters
     
     Returns:
-        Dictionary with beam size metrics (mse, mae, log_mse, log_mae)
+        Dictionary with beam size metrics (mse, log_mse, mae, log_mae)
     """
     if incoming_beam is None:
         incoming_beam = cheetah.ParameterBeam.from_parameters(
@@ -33,76 +41,27 @@ def ares_problem(
             energy=torch.tensor(100e6),
         )
     
-    # Drift lengths (from lattice specification)
-    d1_length = torch.tensor(0.17504000663757324)
-    d2_length = torch.tensor(0.42800000309944153)
-    d3_length = torch.tensor(0.20399999618530273)
-    d4_length = torch.tensor(0.20399999618530273)
-    d5_length = torch.tensor(0.17900000512599945)
-    d6_length = torch.tensor(0.44999998807907104)
+    # Load ARES lattice and extract the section of interest
+    ares_segment = cheetah.Segment.from_lattice_json("ARESlatticeStage3v1_9.json")
+    ares_ea = ares_segment.subcell("AREASOLA1", "AREABSCR1")
     
-    # Quadrupole length (all same)
-    quad_length = torch.tensor(0.12200000137090683)
+    # Set magnet strengths
+    ares_ea.AREAMQZM1.k1 = torch.tensor(input_param["q1"])
+    ares_ea.AREAMQZM2.k1 = torch.tensor(input_param["q2"])
+    ares_ea.AREAMCVM1.angle = torch.tensor(input_param["cv"])
+    ares_ea.AREAMQZM3.k1 = torch.tensor(input_param["q3"])
+    ares_ea.AREAMCHM1.angle = torch.tensor(input_param["ch"])
     
-    # Corrector lengths
-    corrector_length = torch.tensor(0.019999999552965164)
+    # Apply misalignments if provided
+    if misalignment_config is not None:
+        for magnet_name, (dx, dy) in misalignment_config.items():
+            magnet = getattr(ares_ea, magnet_name)
+            magnet.misalignment = torch.tensor([dx, dy])
     
-    # Get misalignments from config (default to 0.0)
-    q1_misalignment = [
-        lattice_config.get("q1_misalignment_x", 0.0),
-        lattice_config.get("q1_misalignment_y", 0.0)
-    ]
-    q2_misalignment = [
-        lattice_config.get("q2_misalignment_x", 0.0),
-        lattice_config.get("q2_misalignment_y", 0.0)
-    ]
-    q3_misalignment = [
-        lattice_config.get("q3_misalignment_x", 0.0),
-        lattice_config.get("q3_misalignment_y", 0.0)
-    ]
+    # Simulate beam propagation
+    out_beam = ares_ea(incoming_beam)
     
-    # Build ARES segment:  d1 -> q1 -> d2 -> q2 -> d3 -> cv -> d4 -> q3 -> d5 -> ch -> d6
-    ares_segment = cheetah.Segment(
-        [
-            cheetah.Drift(length=d1_length, name="D1"),
-            cheetah.Quadrupole(
-                length=quad_length,
-                k1=torch.tensor(input_param["q1"]),
-                misalignment=torch.tensor(q1_misalignment),
-                name="Q1"
-            ),
-            cheetah.Drift(length=d2_length, name="D2"),
-            cheetah.Quadrupole(
-                length=quad_length,
-                k1=torch.tensor(input_param["q2"]),
-                misalignment=torch.tensor(q2_misalignment),
-                name="Q2"
-            ),
-            cheetah.Drift(length=d3_length, name="D3"),
-            cheetah.VerticalCorrector(
-                length=corrector_length,
-                angle=torch.tensor(input_param["cv"]),
-                name="CV"
-            ),
-            cheetah.Drift(length=d4_length, name="D4"),
-            cheetah.Quadrupole(
-                length=quad_length,
-                k1=torch.tensor(input_param["q3"]),
-                misalignment=torch.tensor(q3_misalignment),
-                name="Q3"
-            ),
-            cheetah.Drift(length=d5_length, name="D5"),
-            cheetah.HorizontalCorrector(
-                length=corrector_length,
-                angle=torch.tensor(input_param["ch"]),
-                name="CH"
-            ),
-            cheetah.Drift(length=d6_length, name="D6"),
-        ]
-    )
-    
-    out_beam = ares_segment(incoming_beam)
-    
+    # Calculate metrics
     beam_size_mse = 0.5 * (out_beam.sigma_x**2 + out_beam.sigma_y**2)
     beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
     
@@ -110,16 +69,17 @@ def ares_problem(
         "mse": beam_size_mse.detach().numpy(),
         "log_mse": beam_size_mse.log().detach().numpy(),
         "mae": beam_size_mae.detach().numpy(),
-        "log_mae":  beam_size_mae.log().detach().numpy(),
+        "log_mae": beam_size_mae.log().detach().numpy(),
     }
 
 
 # Prior Mean Functions for BO
 class AresPriorMean(Mean):
     """ARES Lattice as a prior mean function for BO."""
-    
+
     def __init__(self, incoming_beam: Optional[cheetah.Beam] = None):
         super().__init__()
+        
         if incoming_beam is None:
             incoming_beam = cheetah.ParameterBeam.from_parameters(
                 sigma_x=torch.tensor(1e-4),
@@ -130,147 +90,212 @@ class AresPriorMean(Mean):
             )
         self.incoming_beam = incoming_beam
         
-        # Drift lengths (fixed from lattice specification)
-        d1_length = torch.tensor([0.17504000663757324])
-        d2_length = torch.tensor([0.42800000309944153])
-        d3_length = torch.tensor([0.20399999618530273])
-        d4_length = torch.tensor([0.20399999618530273])
-        d5_length = torch.tensor([0.17900000512599945])
-        d6_length = torch.tensor([0.44999998807907104])
+        # Load ARES lattice
+        ares_segment = cheetah.Segment.from_lattice_json("ARESlatticeStage3v1_9.json")
+        self.ares_ea = ares_segment.subcell("AREASOLA1", "AREABSCR1")
         
-        # Quadrupole length (all same)
-        quad_length = torch.tensor([0.12200000137090683])
+        # Define learnable misalignment parameters (6 parameters:  x,y for 3 quadrupoles)
+        # Constraint: misalignments between -0.5mm to 0.5mm (-0.0005m to 0.0005m)
+        misalignment_constraint = Interval(-0.0005, 0.0005)
         
-        # Corrector lengths
-        corrector_length = torch.tensor([0.019999999552965164])
-        
-        # Initialize elements
-        self.D1 = cheetah.Drift(length=d1_length, name="D1")
-        self.Q1 = cheetah.Quadrupole(
-            length=quad_length,
-            k1=torch.tensor([0.0]),
-            misalignment=torch.tensor([0.0, 0.0]),
-            name="Q1"
-        )
-        self.D2 = cheetah.Drift(length=d2_length, name="D2")
-        self.Q2 = cheetah.Quadrupole(
-            length=quad_length,
-            k1=torch.tensor([0.0]),
-            misalignment=torch.tensor([0.0, 0.0]),
-            name="Q2"
-        )
-        self.D3 = cheetah.Drift(length=d3_length, name="D3")
-        self.CV = cheetah.VerticalCorrector(
-            length=corrector_length,
-            angle=torch.tensor([0.0]),
-            name="CV"
-        )
-        self.D4 = cheetah.Drift(length=d4_length, name="D4")
-        self.Q3 = cheetah.Quadrupole(
-            length=quad_length,
-            k1=torch.tensor([0.0]),
-            misalignment=torch.tensor([0.0, 0.0]),
-            name="Q3"
-        )
-        self.D5 = cheetah.Drift(length=d5_length, name="D5")
-        self.CH = cheetah.HorizontalCorrector(
-            length=corrector_length,
-            angle=torch.tensor([0.0]),
-            name="CH"
-        )
-        self.D6 = cheetah.Drift(length=d6_length, name="D6")
-        
-        self.segment = cheetah.Segment(
-            elements=[
-                self.D1, self.Q1, self.D2, self.Q2, self.D3,
-                self.CV, self.D4, self.Q3, self.D5, self.CH, self.D6
-            ]
-        )
-        
-        # Introduce trainable misalignment parameters
-        # Each quadrupole has x and y misalignment
-        # Note: No Positive constraint since misalignments can be negative
-        self.register_parameter("raw_q1_misalignment_x", nn.Parameter(torch.tensor(0.0)))
-        self.register_parameter("raw_q1_misalignment_y", nn.Parameter(torch.tensor(0.0)))
-        self.register_parameter("raw_q2_misalignment_x", nn.Parameter(torch.tensor(0.0)))
-        self.register_parameter("raw_q2_misalignment_y", nn.Parameter(torch.tensor(0.0)))
-        self.register_parameter("raw_q3_misalignment_x", nn.Parameter(torch.tensor(0.0)))
-        self.register_parameter("raw_q3_misalignment_y", nn.Parameter(torch.tensor(0.0)))
-        
-        # Register priors for misalignments (range:  -0.5mm to 0.5mm = -0.0005m to 0.0005m)
+        # AREAMQZM1 misalignments
+        self.register_parameter("raw_q1_misalign_x", nn.Parameter(torch.tensor(0.0)))
+        self.register_parameter("raw_q1_misalign_y", nn.Parameter(torch.tensor(0.0)))
         self.register_prior(
-            "q1_misalignment_x_prior",
+            "q1_misalign_x_prior",
             SmoothedBoxPrior(-0.0005, 0.0005),
-            lambda m: m.raw_q1_misalignment_x,
-            lambda m, v: m._set_param("raw_q1_misalignment_x", v)
+            self._q1_misalign_x_param,
+            self._set_q1_misalign_x,
         )
         self.register_prior(
-            "q1_misalignment_y_prior",
+            "q1_misalign_y_prior",
             SmoothedBoxPrior(-0.0005, 0.0005),
-            lambda m:  m.raw_q1_misalignment_y,
-            lambda m, v: m._set_param("raw_q1_misalignment_y", v)
+            self._q1_misalign_y_param,
+            self._set_q1_misalign_y,
+        )
+        self.register_constraint("raw_q1_misalign_x", misalignment_constraint)
+        self.register_constraint("raw_q1_misalign_y", misalignment_constraint)
+        
+        # AREAMQZM2 misalignments
+        self.register_parameter("raw_q2_misalign_x", nn.Parameter(torch.tensor(0.0)))
+        self.register_parameter("raw_q2_misalign_y", nn.Parameter(torch.tensor(0.0)))
+        self.register_prior(
+            "q2_misalign_x_prior",
+            SmoothedBoxPrior(-0.0005, 0.0005),
+            self._q2_misalign_x_param,
+            self._set_q2_misalign_x,
         )
         self.register_prior(
-            "q2_misalignment_x_prior",
+            "q2_misalign_y_prior",
             SmoothedBoxPrior(-0.0005, 0.0005),
-            lambda m: m.raw_q2_misalignment_x,
-            lambda m, v: m._set_param("raw_q2_misalignment_x", v)
+            self._q2_misalign_y_param,
+            self._set_q2_misalign_y,
+        )
+        self.register_constraint("raw_q2_misalign_x", misalignment_constraint)
+        self.register_constraint("raw_q2_misalign_y", misalignment_constraint)
+        
+        # AREAMQZM3 misalignments
+        self.register_parameter("raw_q3_misalign_x", nn.Parameter(torch.tensor(0.0)))
+        self.register_parameter("raw_q3_misalign_y", nn.Parameter(torch.tensor(0.0)))
+        self.register_prior(
+            "q3_misalign_x_prior",
+            SmoothedBoxPrior(-0.0005, 0.0005),
+            self._q3_misalign_x_param,
+            self._set_q3_misalign_x,
         )
         self.register_prior(
-            "q2_misalignment_y_prior",
+            "q3_misalign_y_prior",
             SmoothedBoxPrior(-0.0005, 0.0005),
-            lambda m: m.raw_q2_misalignment_y,
-            lambda m, v: m._set_param("raw_q2_misalignment_y", v)
+            self._q3_misalign_y_param,
+            self._set_q3_misalign_y,
         )
-        self.register_prior(
-            "q3_misalignment_x_prior",
-            SmoothedBoxPrior(-0.0005, 0.0005),
-            lambda m: m.raw_q3_misalignment_x,
-            lambda m, v: m._set_param("raw_q3_misalignment_x", v)
-        )
-        self.register_prior(
-            "q3_misalignment_y_prior",
-            SmoothedBoxPrior(-0.0005, 0.0005),
-            lambda m:  m.raw_q3_misalignment_y,
-            lambda m, v: m._set_param("raw_q3_misalignment_y", v)
-        )
-    
-    def _set_param(self, param_name, value):
-        if not torch.is_tensor(value):
-            value = torch.as_tensor(value).to(getattr(self, param_name))
-        self.initialize(**{param_name: value})
-    
+        self.register_constraint("raw_q3_misalign_x", misalignment_constraint)
+        self.register_constraint("raw_q3_misalign_y", misalignment_constraint)
+
     def forward(self, X: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass through ARES lattice.
+        Forward pass through the prior mean.
         
         Args:
-            X:  Tensor of shape [... , 5] with [q1, q2, q3, cv, ch]
+            X:  Tensor of shape (..., 5) with columns [q1, q2, cv, q3, ch]
         
         Returns:
-            Beam size MAE
+            Predicted beam size (MAE)
         """
         # Set magnet strengths from input
-        self.Q1.k1 = X[..., 0]
-        self.Q2.k1 = X[..., 1]
-        self.Q3.k1 = X[..., 2]
-        self.CV.angle = X[..., 3]
-        self.CH.angle = X[..., 4]
+        self.ares_ea.AREAMQZM1.k1 = X[..., 0]
+        self.ares_ea.AREAMQZM2.k1 = X[..., 1]
+        self.ares_ea.AREAMCVM1.angle = X[..., 2]
+        self.ares_ea.AREAMQZM3.k1 = X[..., 3]
+        self.ares_ea.AREAMCHM1.angle = X[..., 4]
         
-        # Set trainable misalignments
-        self.Q1.misalignment = torch.stack([
-            self.raw_q1_misalignment_x,
-            self.raw_q1_misalignment_y
+        # Apply learnable misalignments
+        self.ares_ea.AREAMQZM1.misalignment = torch.stack([
+            self.q1_misalign_x, 
+            self.q1_misalign_y
         ])
-        self.Q2.misalignment = torch.stack([
-            self.raw_q2_misalignment_x,
-            self.raw_q2_misalignment_y
+        self.ares_ea.AREAMQZM2.misalignment = torch.stack([
+            self.q2_misalign_x,
+            self.q2_misalign_y
         ])
-        self.Q3.misalignment = torch.stack([
-            self.raw_q3_misalignment_x,
-            self.raw_q3_misalignment_y
+        self.ares_ea.AREAMQZM3.misalignment = torch.stack([
+            self.q3_misalign_x,
+            self.q3_misalign_y
         ])
         
-        out_beam = self.segment(self.incoming_beam)
+        # Simulate beam propagation
+        out_beam = self.ares_ea(self.incoming_beam)
         beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
+        
         return beam_size_mae
+
+    # Properties and setters for Q1 misalignments
+    @property
+    def q1_misalign_x(self):
+        return self._q1_misalign_x_param(self)
+    
+    @q1_misalign_x.setter
+    def q1_misalign_x(self, value:  torch.Tensor):
+        self._set_q1_misalign_x(self, value)
+    
+    def _q1_misalign_x_param(self, m):
+        return m.raw_q1_misalign_x_constraint.transform(self.raw_q1_misalign_x)
+    
+    def _set_q1_misalign_x(self, m, value:  torch.Tensor):
+        if not torch.is_tensor(value):
+            value = torch.as_tensor(value).to(m.raw_q1_misalign_x)
+        m.initialize(
+            raw_q1_misalign_x=m.raw_q1_misalign_x_constraint.inverse_transform(value)
+        )
+    
+    @property
+    def q1_misalign_y(self):
+        return self._q1_misalign_y_param(self)
+    
+    @q1_misalign_y.setter
+    def q1_misalign_y(self, value:  torch.Tensor):
+        self._set_q1_misalign_y(self, value)
+    
+    def _q1_misalign_y_param(self, m):
+        return m.raw_q1_misalign_y_constraint.transform(self.raw_q1_misalign_y)
+    
+    def _set_q1_misalign_y(self, m, value: torch.Tensor):
+        if not torch.is_tensor(value):
+            value = torch.as_tensor(value).to(m.raw_q1_misalign_y)
+        m.initialize(
+            raw_q1_misalign_y=m.raw_q1_misalign_y_constraint.inverse_transform(value)
+        )
+    
+    # Properties and setters for Q2 misalignments
+    @property
+    def q2_misalign_x(self):
+        return self._q2_misalign_x_param(self)
+    
+    @q2_misalign_x.setter
+    def q2_misalign_x(self, value:  torch.Tensor):
+        self._set_q2_misalign_x(self, value)
+    
+    def _q2_misalign_x_param(self, m):
+        return m.raw_q2_misalign_x_constraint.transform(self.raw_q2_misalign_x)
+    
+    def _set_q2_misalign_x(self, m, value: torch.Tensor):
+        if not torch.is_tensor(value):
+            value = torch.as_tensor(value).to(m.raw_q2_misalign_x)
+        m.initialize(
+            raw_q2_misalign_x=m.raw_q2_misalign_x_constraint.inverse_transform(value)
+        )
+    
+    @property
+    def q2_misalign_y(self):
+        return self._q2_misalign_y_param(self)
+    
+    @q2_misalign_y.setter
+    def q2_misalign_y(self, value: torch.Tensor):
+        self._set_q2_misalign_y(self, value)
+    
+    def _q2_misalign_y_param(self, m):
+        return m.raw_q2_misalign_y_constraint.transform(self.raw_q2_misalign_y)
+    
+    def _set_q2_misalign_y(self, m, value: torch.Tensor):
+        if not torch.is_tensor(value):
+            value = torch.as_tensor(value).to(m.raw_q2_misalign_y)
+        m.initialize(
+            raw_q2_misalign_y=m.raw_q2_misalign_y_constraint.inverse_transform(value)
+        )
+    
+    # Properties and setters for Q3 misalignments
+    @property
+    def q3_misalign_x(self):
+        return self._q3_misalign_x_param(self)
+    
+    @q3_misalign_x.setter
+    def q3_misalign_x(self, value: torch.Tensor):
+        self._set_q3_misalign_x(self, value)
+    
+    def _q3_misalign_x_param(self, m):
+        return m.raw_q3_misalign_x_constraint.transform(self.raw_q3_misalign_x)
+    
+    def _set_q3_misalign_x(self, m, value: torch.Tensor):
+        if not torch.is_tensor(value):
+            value = torch.as_tensor(value).to(m.raw_q3_misalign_x)
+        m.initialize(
+            raw_q3_misalign_x=m.raw_q3_misalign_x_constraint.inverse_transform(value)
+        )
+    
+    @property
+    def q3_misalign_y(self):
+        return self._q3_misalign_y_param(self)
+    
+    @q3_misalign_y.setter
+    def q3_misalign_y(self, value: torch.Tensor):
+        self._set_q3_misalign_y(self, value)
+    
+    def _q3_misalign_y_param(self, m):
+        return m.raw_q3_misalign_y_constraint.transform(self.raw_q3_misalign_y)
+    
+    def _set_q3_misalign_y(self, m, value: torch.Tensor):
+        if not torch.is_tensor(value):
+            value = torch.as_tensor(value).to(m.raw_q3_misalign_y)
+        m.initialize(
+            raw_q3_misalign_y=m.raw_q3_misalign_y_constraint.inverse_transform(value)
+        )
