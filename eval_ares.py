@@ -158,7 +158,7 @@ def main(args):
                 )
             
             generator = UpperConfidenceBoundGenerator(
-                beta=0.5, vocs=vocs, gp_constructor=gp_constructor
+                beta=2.0, vocs=vocs, gp_constructor=gp_constructor
             )
             
         elif args.optimizer == "NM":
