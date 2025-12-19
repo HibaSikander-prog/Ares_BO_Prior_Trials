@@ -11,9 +11,9 @@ from gpytorch.priors import SmoothedBoxPrior
 # ARES Problem
 def ares_problem(
     input_param: Dict[str, float],
-    incoming_beam: Optional[cheetah.Beam] = None,
+    incoming_beam:  Optional[cheetah.Beam] = None,
     misalignment_config: Optional[Dict[str, tuple]] = None,
-) -> Dict[str, float]:
+) -> Dict[str, float]: 
     """
     Simulate ARES accelerator and return beam quality metrics.
     
@@ -30,10 +30,11 @@ def ares_problem(
             - Units: meters
     
     Returns:
-        Dictionary with beam size metrics (mse, log_mse, mae, log_mae)
+        Dictionary with beam metrics (mae, position_error, combined objective)
     """
     if incoming_beam is None:
-        incoming_beam = cheetah.ParameterBeam.from_parameters(
+        incoming_beam = cheetah.ParticleBeam.from_parameters(
+            num_particles=10000,  # Use ParticleBeam for bmadx tracking
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(2e-3),
             sigma_px=torch.tensor(1e-4),
@@ -44,6 +45,11 @@ def ares_problem(
     # Load ARES lattice and extract the section of interest
     ares_segment = cheetah.Segment.from_lattice_json("ARESlatticeStage3v1_9.json")
     ares_ea = ares_segment.subcell("AREASOLA1", "AREABSCR1")
+    
+    # Set tracking method to bmadx for quadrupoles (required for misalignments)
+    ares_ea.AREAMQZM1.tracking_method = "bmadx"
+    ares_ea.AREAMQZM2.tracking_method = "bmadx"
+    ares_ea.AREAMQZM3.tracking_method = "bmadx"
     
     # Set magnet strengths
     ares_ea.AREAMQZM1.k1 = torch.tensor(input_param["q1"])
@@ -56,7 +62,12 @@ def ares_problem(
     if misalignment_config is not None:
         for magnet_name, (dx, dy) in misalignment_config.items():
             magnet = getattr(ares_ea, magnet_name)
-            magnet.misalignment = torch.tensor([dx, dy])
+            magnet.misalignment = torch.tensor([dx, dy], dtype=torch.float32)
+    else:
+        # Explicitly set to zero if no misalignments provided
+        ares_ea.AREAMQZM1.misalignment = torch.tensor([0.0, 0.0])
+        ares_ea.AREAMQZM2.misalignment = torch.tensor([0.0, 0.0])
+        ares_ea.AREAMQZM3.misalignment = torch.tensor([0.0, 0.0])
     
     # Simulate beam propagation
     out_beam = ares_ea(incoming_beam)
@@ -65,23 +76,34 @@ def ares_problem(
     beam_size_mse = 0.5 * (out_beam.sigma_x**2 + out_beam.sigma_y**2)
     beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
     
+    # Include beam position error (critical for misalignment sensitivity!)
+    beam_position_error = (out_beam.mu_x**2 + out_beam.mu_y**2).sqrt()
+    
+    # Combined objective:  beam size + weighted position error
+    combined_objective = beam_size_mae + 10.0 * beam_position_error
+    
     return {
         "mse": beam_size_mse.detach().numpy(),
         "log_mse": beam_size_mse.log().detach().numpy(),
         "mae": beam_size_mae.detach().numpy(),
-        "log_mae": beam_size_mae.log().detach().numpy(),
+        "log_mae":  beam_size_mae.log().detach().numpy(),
+        "position_error": beam_position_error.detach().numpy(),
+        "log_position_error": beam_position_error.log().detach().numpy(),
+        "combined": combined_objective.detach().numpy(),
+        "log_combined": combined_objective.log().detach().numpy(),
     }
 
 
 # Prior Mean Functions for BO
 class AresPriorMean(Mean):
-    """ARES Lattice as a prior mean function for BO."""
+    """ARES Lattice as a prior mean function for BO with trainable misalignments."""
 
     def __init__(self, incoming_beam: Optional[cheetah.Beam] = None):
         super().__init__()
         
         if incoming_beam is None:
-            incoming_beam = cheetah.ParameterBeam.from_parameters(
+            incoming_beam = cheetah.ParticleBeam.from_parameters(
+                num_particles=10000,
                 sigma_x=torch.tensor(1e-4),
                 sigma_y=torch.tensor(2e-3),
                 sigma_px=torch.tensor(1e-4),
@@ -93,6 +115,11 @@ class AresPriorMean(Mean):
         # Load ARES lattice
         ares_segment = cheetah.Segment.from_lattice_json("ARESlatticeStage3v1_9.json")
         self.ares_ea = ares_segment.subcell("AREASOLA1", "AREABSCR1")
+        
+        # Set tracking method to bmadx for all quadrupoles
+        self.ares_ea.AREAMQZM1.tracking_method = "bmadx"
+        self.ares_ea.AREAMQZM2.tracking_method = "bmadx"
+        self.ares_ea.AREAMQZM3.tracking_method = "bmadx"
         
         # Define learnable misalignment parameters (6 parameters:  x,y for 3 quadrupoles)
         # Constraint: misalignments between -0.5mm to 0.5mm (-0.0005m to 0.0005m)
@@ -153,6 +180,8 @@ class AresPriorMean(Mean):
         self.register_constraint("raw_q3_misalign_y", misalignment_constraint)
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
+        #print(f"[FORWARD CALLED] X.shape={X.shape}, q1_misalign_x={self.q1_misalign_x.item():.6f}")
+
         """
         Forward pass through the prior mean.
         
@@ -160,7 +189,7 @@ class AresPriorMean(Mean):
             X:  Tensor of shape (..., 5) with columns [q1, q2, cv, q3, ch]
         
         Returns:
-            Predicted beam size (MAE)
+            Predicted combined objective (beam size + position error)
         """
         # Set magnet strengths from input
         self.ares_ea.AREAMQZM1.k1 = X[..., 0]
@@ -185,9 +214,13 @@ class AresPriorMean(Mean):
         
         # Simulate beam propagation
         out_beam = self.ares_ea(self.incoming_beam)
-        beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
         
-        return beam_size_mae
+        # Calculate combined objective (matching the objective function)
+        beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
+        beam_position_error = (out_beam.mu_x**2 + out_beam.mu_y**2).sqrt()
+        combined = beam_size_mae + 10.0 * beam_position_error
+        
+        return combined
 
     # Properties and setters for Q1 misalignments
     @property
@@ -213,7 +246,7 @@ class AresPriorMean(Mean):
         return self._q1_misalign_y_param(self)
     
     @q1_misalign_y.setter
-    def q1_misalign_y(self, value:  torch.Tensor):
+    def q1_misalign_y(self, value: torch.Tensor):
         self._set_q1_misalign_y(self, value)
     
     def _q1_misalign_y_param(self, m):
@@ -232,7 +265,7 @@ class AresPriorMean(Mean):
         return self._q2_misalign_x_param(self)
     
     @q2_misalign_x.setter
-    def q2_misalign_x(self, value:  torch.Tensor):
+    def q2_misalign_x(self, value: torch.Tensor):
         self._set_q2_misalign_x(self, value)
     
     def _q2_misalign_x_param(self, m):
@@ -250,7 +283,7 @@ class AresPriorMean(Mean):
         return self._q2_misalign_y_param(self)
     
     @q2_misalign_y.setter
-    def q2_misalign_y(self, value: torch.Tensor):
+    def q2_misalign_y(self, value:  torch.Tensor):
         self._set_q2_misalign_y(self, value)
     
     def _q2_misalign_y_param(self, m):
@@ -269,7 +302,7 @@ class AresPriorMean(Mean):
         return self._q3_misalign_x_param(self)
     
     @q3_misalign_x.setter
-    def q3_misalign_x(self, value: torch.Tensor):
+    def q3_misalign_x(self, value:  torch.Tensor):
         self._set_q3_misalign_x(self, value)
     
     def _q3_misalign_x_param(self, m):

@@ -7,7 +7,7 @@ Here we use the BO implementation from the Xopt package.
 ## Folder Structure
 
 - `bo_cheetah_prior_ares.py` Single file implementation of the example
-  - `ares_problem` Wraps around a ares focusing task to be conformed with the Xopt requirements.
+  - `ares_problem` Wraps around a FODO focusing task to be conformed with the Xopt requirements.
   - `AresPriorMean` is the mean module for BO. Note: the forward speed is currently slow due to the non-batched evaluation. (This is planned to be improved in future Cheetah versions.)
 - `eval_ares.py` runs evaluation with different conditions. See below.
 - `data/` stores the Xopt run results (`pd.Dataframe`) as CSV files.
