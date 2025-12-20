@@ -23,7 +23,7 @@ from xopt.generators.sequential.neldermead import NelderMeadGenerator
 
 def main(args):
     # VOCS - 5 magnets:  3 quadrupoles + 2 correctors
-    # Using 'combined' objective which includes beam size + position error
+    # Using 'mae' objective which includes beam size + position error
     vocs_config = """
         variables:
             q1: [-30, 30]
@@ -32,7 +32,7 @@ def main(args):
             q3: [-30, 30]
             ch: [-0.006, 0.006]
         objectives:
-            combined: minimize
+            mae: minimize
     """
     vocs = VOCS.from_yaml(vocs_config)
 
@@ -47,7 +47,7 @@ def main(args):
     elif args.task == "mismatched":
         # Different beam characteristics
         incoming_beam = cheetah.ParticleBeam.from_parameters(
-            num_particles=10000,
+            num_particles=1000,
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(1e-3),  # Changed from 2e-3 to 1e-3
             sigma_px=torch.tensor(1e-4),
@@ -56,9 +56,9 @@ def main(args):
         )
         # Different misalignments (using larger values for better signal)
         misalignment_config = {
-            "AREAMQZM1": (0.0003, -0.0002),   # 0.3mm, -0.2mm
-            "AREAMQZM2": (-0.0001, 0.00025),  # -0.1mm, 0.25mm
-            "AREAMQZM3": (0.00015, -0.0003),  # 0.15mm, -0.3mm
+            "AREAMQZM1": (0.000000, 0.000100),   # 0, 100 μm
+            "AREAMQZM2": (0.000030, -0.000120),  # 30, -120 μm
+            "AREAMQZM3": (-0.000040, 0.000080),  # -40, 80 μm
         }
         evaluator = Evaluator(
             function=bo_cheetah_prior.ares_problem,
@@ -70,7 +70,7 @@ def main(args):
     elif args.task == "matched_prior_newtask":  
         # Same as mismatched but prior will be initialized correctly
         incoming_beam = cheetah.ParticleBeam.from_parameters(
-            num_particles=10000,
+            num_particles=1000,
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(1e-3),
             sigma_px=torch.tensor(1e-4),
@@ -78,9 +78,9 @@ def main(args):
             energy=torch.tensor(100e6),
         )
         misalignment_config = {
-            "AREAMQZM1": (0.0003, -0.0002),
-            "AREAMQZM2": (-0.0001, 0.00025),
-            "AREAMQZM3": (0.00015, -0.0003),
+            "AREAMQZM1": (0.000000, 0.000100),   # 0, 100 μm
+            "AREAMQZM2": (0.000030, -0.000120),  # 30, -120 μm
+            "AREAMQZM3": (-0.000040, 0.000080),  # -40, 80 μm
         }
         evaluator = Evaluator(
             function=bo_cheetah_prior.ares_problem,
@@ -108,22 +108,20 @@ def main(args):
             if args.task == "matched":  
                 # Matched case:  prior with default beam, no misalignments, not trainable
                 prior_mean_module = bo_cheetah_prior.AresPriorMean()
-                # Initialize all misalignments to zero (default)
-                prior_mean_module.q1_misalign_x = 0.0
-                prior_mean_module.q1_misalign_y = 0.0
-                prior_mean_module.q2_misalign_x = 0.0
-                prior_mean_module.q2_misalign_y = 0.0
-                prior_mean_module.q3_misalign_x = 0.0
-                prior_mean_module.q3_misalign_y = 0.0
+                # All misalignments default to 0.0 (matched to evaluator)
                 
                 gp_constructor = StandardModelConstructor(
-                    mean_modules={"combined": prior_mean_module}
+                    mean_modules={"mae": prior_mean_module}
+                    # NOT trainable
                 )
                 
             elif args.task == "mismatched":
-                # Mismatched case: prior trained on "old" problem, allow training
-                prior_mean_module = bo_cheetah_prior.AresPriorMean()
-                # Initialize with "old" misalignments (zero)
+                # Mismatched case: prior starts with WRONG values, learns correct ones
+                prior_mean_module = bo_cheetah_prior.AresPriorMean(
+                    incoming_beam=incoming_beam
+                )
+                # Initialize with ZERO (wrong initial guess)
+                # Like FODO's drift_length=0.5 when truth is 0.7
                 prior_mean_module.q1_misalign_x = 0.0
                 prior_mean_module.q1_misalign_y = 0.0
                 prior_mean_module.q2_misalign_x = 0.0
@@ -133,15 +131,15 @@ def main(args):
 
                  
                 gp_constructor = StandardModelConstructor(
-                    mean_modules={"combined": prior_mean_module},
-                    trainable_mean_keys=["combined"], 
+                    mean_modules={"mae": prior_mean_module},
+                    trainable_mean_keys=["mae"], 
                      use_low_noise_prior=False,  
                 )
                 
             elif args.task == "matched_prior_newtask":
                 # Matched prior for new task:  correct beam and misalignments
                 incoming_beam = cheetah.ParticleBeam.from_parameters(
-                    num_particles=10000,
+                    num_particles=1000,
                     sigma_x=torch.tensor(1e-4),
                     sigma_y=torch.tensor(1e-3),
                     sigma_px=torch.tensor(1e-4),
@@ -151,16 +149,18 @@ def main(args):
                 prior_mean_module = bo_cheetah_prior.AresPriorMean(
                     incoming_beam=incoming_beam
                 )
-                # Initialize with correct misalignments
-                prior_mean_module.q1_misalign_x = 0.0003
-                prior_mean_module.q1_misalign_y = -0.0002
-                prior_mean_module.q2_misalign_x = -0.0001
-                prior_mean_module.q2_misalign_y = 0.00025
-                prior_mean_module.q3_misalign_x = 0.00015
-                prior_mean_module.q3_misalign_y = -0.0003
+                # Initialize with CORRECT values (matched to evaluator)
+                # Like FODO's drift_length=0.7 when truth is 0.7
+                prior_mean_module.q1_misalign_x = 0.000000
+                prior_mean_module.q1_misalign_y = 0.000100
+                prior_mean_module.q2_misalign_x = 0.000030
+                prior_mean_module.q2_misalign_y = -0.000120
+                prior_mean_module.q3_misalign_x = -0.000040
+                prior_mean_module.q3_misalign_y = 0.000080
                 
                 gp_constructor = StandardModelConstructor(
-                    mean_modules={"combined": prior_mean_module}
+                    mean_modules={"mae": prior_mean_module}
+                    # NOT trainable (already correct)
                 )
             
             generator = UpperConfidenceBoundGenerator(
@@ -196,92 +196,78 @@ def main(args):
         for step_num in tqdm.tqdm(range(args.max_evaluation_steps)):
             xopt.step()
 
-            # === FIX: Extract and persist learned parameters ===
-            if args.optimizer == "BO_prior" and args.task == "mismatched":
-                try:
-                    # Access the trained GP model
-                    model = xopt.generator.model
-                    gp_model = model.models[0]  # First model in ModelListGP
-                    custom_mean = gp_model.mean_module  # CustomMean wrapper
-                    trained_prior = custom_mean._model  # Our AresPriorMean inside
-                    
-                    # Extract learned parameters
-                    q1x = trained_prior.q1_misalign_x.item()
-                    q1y = trained_prior.q1_misalign_y.item()
-                    q2x = trained_prior.q2_misalign_x.item()
-                    q2y = trained_prior.q2_misalign_y.item()
-                    q3x = trained_prior.q3_misalign_x.item()
-                    q3y = trained_prior.q3_misalign_y.item()
-                    
-                    # Copy back to the original prior_mean_module to persist
-                    with torch.no_grad():
-                        prior_mean_module.raw_q1_misalign_x.copy_(trained_prior.raw_q1_misalign_x)
-                        prior_mean_module.raw_q1_misalign_y.copy_(trained_prior.raw_q1_misalign_y)
-                        prior_mean_module.raw_q2_misalign_x.copy_(trained_prior.raw_q2_misalign_x)
-                        prior_mean_module.raw_q2_misalign_y.copy_(trained_prior.raw_q2_misalign_y)
-                        prior_mean_module.raw_q3_misalign_x.copy_(trained_prior.raw_q3_misalign_x)
-                        prior_mean_module.raw_q3_misalign_y.copy_(trained_prior.raw_q3_misalign_y)
-                    
-                    if step_num == 0:
-                        print(f"\n=== After Step {step_num + 1}:  Extracted & Persisted ===")
-                        print(f"  Q1: x={q1x:.6f}, y={q1y:.6f}")
-                        print(f"  Q2: x={q2x:.6f}, y={q2y:.6f}")
-                        print(f"  Q3: x={q3x:.6f}, y={q3y:.6f}")
-                        print("===")
-                except Exception as e: 
-                    print(f"Warning: Could not extract parameters:  {e}")
-            # === END FIX ===
-            
-            # Print progress every 20 steps
+            # Diagnostic logging for mismatched task
             if (step_num + 1) % 10 == 0 and args.optimizer == "BO_prior" and args.task == "mismatched":
-                current_best = xopt.data["combined"].min()
-                print(f"    Step {step_num + 1}:  Best combined = {current_best:.6e}")
-                # Also print current learned misalignments
-                print(f"    Current misalignments:  Q1_x={prior_mean_module.q1_misalign_x.item():.6f}")
+                current_best = xopt.data["mae"].min()
+                print(f"\n    Step {step_num + 1}: Best mae = {current_best:.6e}")
+                
+                # Try to extract learned misalignments
+                try: 
+                    model = xopt.generator.model
+                    gp_model = model.models[0]
+                    learned_mean = gp_model.mean_module._model
+                    
+                    print(f"    Learned misalignments:")
+                    print(f"      Q1: x={learned_mean.q1_misalign_x.item():.6f}, y={learned_mean.q1_misalign_y.item():.6f}")
+                    print(f"      Q2: x={learned_mean.q2_misalign_x.item():.6f}, y={learned_mean.q2_misalign_y.item():.6f}")
+                    print(f"      Q3: x={learned_mean.q3_misalign_x.item():.6f}, y={learned_mean.q3_misalign_y.item():.6f}")
+                    print(f"    Target:")
+                    print(f"      Q1: x=0.000000, y=0.000100")
+                    print(f"      Q2: x=0.000030, y=-0.000120")
+                    print(f"      Q3: x=-0.000040, y=0.000080")
+                except Exception as e:
+                    print(f"    (Could not extract learned values: {e})")
 
         # Post processing the dataframes
         xopt.data.index.name = "step"
         xopt.data["run"] = i
-        xopt.data["best_combined"] = xopt.data["combined"].cummin()
+        xopt.data["best_mae"] = xopt.data["mae"].cummin()
 
         # Also track best_mae for comparison
         if "mae" in xopt.data.columns:
             xopt.data["best_mae"] = xopt.data["mae"].cummin()
 
-        # CRITICAL FIX: Save learned misalignments if using BO_prior
+        # Save learned misalignments if using BO_prior
         if args.optimizer == "BO_prior" and args.task in ["mismatched", "matched_prior_newtask"]:
-            # Get the current learned misalignments from the prior
-            xopt.data["q1_misalign_x"] = float(prior_mean_module.q1_misalign_x.item())
-            xopt.data["q1_misalign_y"] = float(prior_mean_module.q1_misalign_y.item())
-            xopt.data["q2_misalign_x"] = float(prior_mean_module.q2_misalign_x.item())
-            xopt.data["q2_misalign_y"] = float(prior_mean_module.q2_misalign_y.item())
-            xopt.data["q3_misalign_x"] = float(prior_mean_module.q3_misalign_x.item())
-            xopt.data["q3_misalign_y"] = float(prior_mean_module.q3_misalign_y.item())
-        
-        # Also track best_mae for comparison with old results
-      #  if "mae" in xopt.data.columns:
-       #     xopt.data["best_mae"] = xopt.data["mae"].cummin()
+            try:
+                model = xopt.generator.model
+                gp_model = model.models[0]
+                learned_mean = gp_model.mean_module._model
+                
+                # Save final learned values to dataframe
+                xopt.data["q1_misalign_x"] = float(learned_mean.q1_misalign_x.item())
+                xopt.data["q1_misalign_y"] = float(learned_mean.q1_misalign_y.item())
+                xopt.data["q2_misalign_x"] = float(learned_mean.q2_misalign_x.item())
+                xopt.data["q2_misalign_y"] = float(learned_mean.q2_misalign_y.item())
+                xopt.data["q3_misalign_x"] = float(learned_mean.q3_misalign_x.item())
+                xopt.data["q3_misalign_y"] = float(learned_mean.q3_misalign_y.item())
+            except Exception as e:
+                print(f"  Warning: Could not save learned misalignments: {e}")
         
         for col in xopt.data.columns:
             xopt.data[col] = xopt.data[col].astype(float)
         df = pd.concat([df, xopt.data])
         
-        # Debug: print learned misalignments
-        if args.optimizer == "BO_prior": 
-            print(f"\n  === Trial {i+1} Summary ===")
-            print(f"  Best combined objective: {xopt.data['combined'].min():.6e}")
-            if args.task in ["mismatched", "matched_prior_newtask"]:
-                print(f"  Learned misalignments:")
-                print(f"    Q1: x={prior_mean_module.q1_misalign_x.item():.6f}m, y={prior_mean_module.q1_misalign_y.item():.6f}m")
-                print(f"    Q2: x={prior_mean_module.q2_misalign_x.item():.6f}m, y={prior_mean_module.q2_misalign_y.item():.6f}m")
-                print(f"    Q3: x={prior_mean_module.q3_misalign_x.item():.6f}m, y={prior_mean_module.q3_misalign_y.item():.6f}m")
+        # Print trial summary
+        print(f"\n  === Trial {i+1} Summary ===")
+        print(f"  Best mae: {xopt.data['mae'].min():.6e}")
+        
+        if args.optimizer == "BO_prior" and args.task in ["mismatched", "matched_prior_newtask"]:
+            try:
+                print(f"  Final learned misalignments:")
+                print(f"    Q1: x={learned_mean.q1_misalign_x.item():.6f}m, y={learned_mean.q1_misalign_y.item():.6f}m")
+                print(f"    Q2: x={learned_mean.q2_misalign_x.item():.6f}m, y={learned_mean.q2_misalign_y.item():.6f}m")
+                print(f"    Q3: x={learned_mean.q3_misalign_x.item():.6f}m, y={learned_mean.q3_misalign_y.item():.6f}m")
+                
                 if args.task == "mismatched":
                     print(f"  Ground truth misalignments:")
-                    print(f"    Q1: x=0.000300m, y=-0.000200m")
-                    print(f"    Q2: x=-0.000100m, y=0.000250m")
-                    print(f"    Q3: x=0.000150m, y=-0.000300m")
-    
-    # Check if the output directory exists
+                    print(f"    Q1: x=0.000000m, y=0.000100m")
+                    print(f"    Q2: x=0.000030m, y=-0.000120m")
+                    print(f"    Q3: x=-0.000040m, y=0.000080m")
+            except: 
+                pass
+
+    # Save results
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     out_filename = f"{args.output_dir}/{args.optimizer}_{args.task}.csv"

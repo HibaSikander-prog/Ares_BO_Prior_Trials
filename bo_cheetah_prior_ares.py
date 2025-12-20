@@ -34,7 +34,7 @@ def ares_problem(
     """
     if incoming_beam is None:
         incoming_beam = cheetah.ParticleBeam.from_parameters(
-            num_particles=10000,  # Use ParticleBeam for bmadx tracking
+            num_particles=1000,  # Use ParticleBeam for bmadx tracking
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(2e-3),
             sigma_px=torch.tensor(1e-4),
@@ -77,20 +77,20 @@ def ares_problem(
     beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
     
     # Include beam position error (critical for misalignment sensitivity!)
-    beam_position_error = (out_beam.mu_x**2 + out_beam.mu_y**2).sqrt()
+    #beam_position_error = (out_beam.mu_x**2 + out_beam.mu_y**2).sqrt()
     
     # Combined objective:  beam size + weighted position error
-    combined_objective = beam_size_mae + 10.0 * beam_position_error
+    #combined_objective = beam_size_mae + 10.0 * beam_position_error
     
     return {
         "mse": beam_size_mse.detach().numpy(),
         "log_mse": beam_size_mse.log().detach().numpy(),
         "mae": beam_size_mae.detach().numpy(),
         "log_mae":  beam_size_mae.log().detach().numpy(),
-        "position_error": beam_position_error.detach().numpy(),
-        "log_position_error": beam_position_error.log().detach().numpy(),
-        "combined": combined_objective.detach().numpy(),
-        "log_combined": combined_objective.log().detach().numpy(),
+       # "position_error": beam_position_error.detach().numpy(),
+        #"log_position_error": beam_position_error.log().detach().numpy(),
+        #"combined": combined_objective.detach().numpy(),
+    #    "log_combined": combined_objective.log().detach().numpy(),
     }
 
 
@@ -103,7 +103,7 @@ class AresPriorMean(Mean):
         
         if incoming_beam is None:
             incoming_beam = cheetah.ParticleBeam.from_parameters(
-                num_particles=10000,
+                num_particles=1000,
                 sigma_x=torch.tensor(1e-4),
                 sigma_y=torch.tensor(2e-3),
                 sigma_px=torch.tensor(1e-4),
@@ -202,25 +202,25 @@ class AresPriorMean(Mean):
         self.ares_ea.AREAMQZM1.misalignment = torch.stack([
             self.q1_misalign_x, 
             self.q1_misalign_y
-        ])
+        ], dim=0)
         self.ares_ea.AREAMQZM2.misalignment = torch.stack([
             self.q2_misalign_x,
             self.q2_misalign_y
-        ])
+        ], dim=0)
         self.ares_ea.AREAMQZM3.misalignment = torch.stack([
             self.q3_misalign_x,
             self.q3_misalign_y
-        ])
+        ], dim=0)
         
         # Simulate beam propagation
         out_beam = self.ares_ea(self.incoming_beam)
         
         # Calculate combined objective (matching the objective function)
         beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
-        beam_position_error = (out_beam.mu_x**2 + out_beam.mu_y**2).sqrt()
-        combined = beam_size_mae + 10.0 * beam_position_error
+        #beam_position_error = (out_beam.mu_x**2 + out_beam.mu_y**2).sqrt()
+        #combined = beam_size_mae + 10.0 * beam_position_error
         
-        return combined
+        return beam_size_mae
 
     # Properties and setters for Q1 misalignments
     @property
