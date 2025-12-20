@@ -78,9 +78,9 @@ def main(args):
             energy=torch.tensor(100e6),
         )
         misalignment_config = {
-            "AREAMQZM1": (0.000000, 0.000100),   # 0, 100 μm
-            "AREAMQZM2": (0.000030, -0.000120),  # 30, -120 μm
-            "AREAMQZM3": (-0.000040, 0.000080),  # -40, 80 μm
+            "AREAMQZM1": (0.000000, 0.000250),   # 250 μm
+            "AREAMQZM2": (0.000100, -0.000300),  # 100, -300 μm
+            "AREAMQZM3":  (-0.000150, 0.000200),  # -150, 200 μm
         }
         evaluator = Evaluator(
             function=bo_cheetah_prior.ares_problem,
@@ -212,9 +212,10 @@ def main(args):
                     print(f"      Q2: x={learned_mean.q2_misalign_x.item():.6f}, y={learned_mean.q2_misalign_y.item():.6f}")
                     print(f"      Q3: x={learned_mean.q3_misalign_x.item():.6f}, y={learned_mean.q3_misalign_y.item():.6f}")
                     print(f"    Target:")
-                    print(f"      Q1: x=0.000000, y=0.000100")
-                    print(f"      Q2: x=0.000030, y=-0.000120")
-                    print(f"      Q3: x=-0.000040, y=0.000080")
+                    print(f"      Q1: x=0.000000, y=0.000250")
+                    print(f"      Q2: x=0.000100, y=-0.000300")
+                    print(f"      Q3: x=-0.000150, y=0.000200")
+                    
                 except Exception as e:
                     print(f"    (Could not extract learned values: {e})")
 
@@ -261,9 +262,9 @@ def main(args):
                 
                 if args.task == "mismatched":
                     print(f"  Ground truth misalignments:")
-                    print(f"    Q1: x=0.000000m, y=0.000100m")
-                    print(f"    Q2: x=0.000030m, y=-0.000120m")
-                    print(f"    Q3: x=-0.000040m, y=0.000080m")
+                    print(f"    Q1: x=0.000000m, y=0.000250m")
+                    print(f"    Q2: x=0.000100m, y=-0.000300m")
+                    print(f"    Q3: x=-0.000150m, y=0.000200m")
             except: 
                 pass
 
