@@ -78,9 +78,9 @@ def main(args):
             energy=torch.tensor(100e6),
         )
         misalignment_config = {
-            "AREAMQZM1": (0.000000, 0.000250),   # 250 μm
-            "AREAMQZM2": (0.000100, -0.000300),  # 100, -300 μm
-            "AREAMQZM3":  (-0.000150, 0.000200),  # -150, 200 μm
+            "AREAMQZM1": (0.000000, 0.000100),   # 0, 100 μm
+            "AREAMQZM2": (0.000030, -0.000120),  # 30, -120 μm
+            "AREAMQZM3": (-0.000040, 0.000080),  # -40, 80 μm
         }
         evaluator = Evaluator(
             function=bo_cheetah_prior.ares_problem,
