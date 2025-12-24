@@ -34,6 +34,7 @@ def ares_problem(
     """
     if incoming_beam is None:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         incoming_beam = cheetah.ParameterBeam.from_parameters(
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(2e-3),
@@ -41,6 +42,8 @@ def ares_problem(
             sigma_py=torch.tensor(1e-4),
             energy=torch.tensor(100e6),
 =======
+=======
+>>>>>>> Stashed changes
         #incoming_beam = cheetah.ParticleBeam.from_parameters(
         incoming_beam = cheetah.ParameterBeam.from_parameters(
             #num_particles=10000,  # Use ParticleBeam for bmadx tracking
@@ -56,6 +59,9 @@ def ares_problem(
             sigma_p=torch.tensor(0.0023),
             energy=torch.tensor(1.0732e+08),
             total_charge=torch.tensor(5.0e-13),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         )
     
@@ -88,6 +94,7 @@ def ares_problem(
     out_beam = ares_ea(incoming_beam)
     
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
     # Calculate metrics
     beam_size_mse = 0.5 * (out_beam.sigma_x**2 + out_beam.sigma_y**2)
     beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
@@ -105,11 +112,23 @@ def ares_problem(
     out_beam.sigma_y.abs()
 )
     return {
+=======
+    ares_beam_mae = 0.25 * (
+    out_beam.mu_x.abs() + 
+    out_beam.sigma_x.abs() + 
+    out_beam.mu_y.abs() + 
+    out_beam.sigma_y.abs()
+)
+    return {
+>>>>>>> Stashed changes
         "mae": ares_beam_mae.detach().numpy(),
         "mu_x": out_beam.mu_x.detach().numpy(),
         "mu_y": out_beam.mu_y.detach().numpy(),
         "sigma_x": out_beam.sigma_x.detach().numpy(),
         "sigma_y": out_beam.sigma_y.detach().numpy(),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
     }
 
@@ -123,6 +142,7 @@ class AresPriorMean(Mean):
         
         if incoming_beam is None:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             incoming_beam = cheetah.ParameterBeam.from_parameters(
                 sigma_x=torch.tensor(1e-4),
                 sigma_y=torch.tensor(2e-3),
@@ -130,6 +150,8 @@ class AresPriorMean(Mean):
                 sigma_py=torch.tensor(1e-4),
                 energy=torch.tensor(100e6),
 =======
+=======
+>>>>>>> Stashed changes
             #incoming_beam = cheetah.ParticleBeam.from_parameters(
             incoming_beam = cheetah.ParameterBeam.from_parameters(
                 #num_particles=10000,  # Use ParticleBeam for bmadx tracking
@@ -145,6 +167,9 @@ class AresPriorMean(Mean):
                 sigma_p=torch.tensor(0.0023),
                 energy=torch.tensor(1.0732e+08),
                 total_charge=torch.tensor(5.0e-13),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
             )
         self.incoming_beam = incoming_beam
@@ -221,7 +246,10 @@ class AresPriorMean(Mean):
 
     def forward(self, X: torch.Tensor) -> torch.Tensor:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
 
 >>>>>>> Stashed changes
         """
@@ -260,12 +288,21 @@ class AresPriorMean(Mean):
             self.q1_misalign_x, 
             self.q1_misalign_y
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         ])
         self.ares_ea.AREAMQZM2.misalignment = torch.stack([
             self.q2_misalign_x,
             self.q2_misalign_y
         ])
         self.ares_ea.AREAMQZM3.misalignment = torch.stack([
+=======
+        ], dim=0)
+        misalign_q2 = torch.stack([
+            self.q2_misalign_x,
+            self.q2_misalign_y
+        ], dim=0)
+        misalign_q3 = torch.stack([
+>>>>>>> Stashed changes
 =======
         ], dim=0)
         misalign_q2 = torch.stack([
@@ -305,13 +342,43 @@ class AresPriorMean(Mean):
         self.ares_ea.AREAMQZM3.misalignment = misalign_q3
 
         
+        # DIAGNOSTIC: Print shapes (remove after debugging)
+       # if not hasattr(self, '_printed_shapes'):
+        #    print(f"\n[DIAGNOSTIC] Misalignment tensor shapes:")
+         #   print(f"  q1_misalign_x type: {type(self.q1_misalign_x)}")
+          #  print(f"  q1_misalign_x shape: {self.q1_misalign_x.shape if hasattr(self.q1_misalign_x, 'shape') else 'no shape'}")
+           # print(f"  misalign_q1 shape: {misalign_q1.shape}")
+            #print(f"  Expected shape: torch.Size([2])")
+            #self._printed_shapes = True
+        
+        # SAFETY CHECK: Assert correct shape
+        try:
+            assert misalign_q1.shape == torch.Size([2]), \
+                f"Q1 misalignment shape error: expected [2], got {misalign_q1.shape}"
+            assert misalign_q2.shape == torch.Size([2]), \
+                f"Q2 misalignment shape error: expected [2], got {misalign_q2.shape}"
+            assert misalign_q3.shape == torch.Size([2]), \
+                f"Q3 misalignment shape error: expected [2], got {misalign_q3.shape}"
+        except AssertionError as e:
+            print(f"\n[ERROR] {e}")
+            print(f"[ERROR] This means the tensor shape fix IS needed!")
+            raise
+        
+        self.ares_ea.AREAMQZM1.misalignment = misalign_q1
+        self.ares_ea.AREAMQZM2.misalignment = misalign_q2
+        self.ares_ea.AREAMQZM3.misalignment = misalign_q3
+
+        
         # Simulate beam propagation
         out_beam = self.ares_ea(self.incoming_beam)
+<<<<<<< Updated upstream
 <<<<<<< Updated upstream
         beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
         
         return beam_size_mae
 =======
+=======
+>>>>>>> Stashed changes
 
            # Calculate MAE (Mean Absolute Error) - must match problem function!
         ares_beam_mae = 0.25 * (
@@ -324,6 +391,9 @@ class AresPriorMean(Mean):
         return ares_beam_mae
         
         #return beam_size_mae
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     # Properties and setters for Q1 misalignments

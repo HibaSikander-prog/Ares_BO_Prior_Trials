@@ -46,6 +46,7 @@ def main(args):
     elif args.task == "mismatched":
         # Different beam characteristics
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         incoming_beam = cheetah.ParameterBeam.from_parameters(
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(1e-3),  # Changed from 2e-3 to 1e-3
@@ -53,6 +54,8 @@ def main(args):
             sigma_py=torch.tensor(1e-4),
             energy=torch.tensor(100e6),
 =======
+=======
+>>>>>>> Stashed changes
         #incoming_beam = cheetah.ParticleBeam.from_parameters(
         incoming_beam = cheetah.ParameterBeam.from_parameters(
             #num_particles=10000,  # Use ParticleBeam for bmadx tracking
@@ -68,14 +71,23 @@ def main(args):
             sigma_p=torch.tensor(0.0023),
             energy=torch.tensor(1.0732e+08),
             total_charge=torch.tensor(5.0e-13),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         )
         # Different misalignments
         misalignment_config = {
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
             "AREAMQZM1": (0.0003, -0.0002),   # 0.3mm, -0.2mm
             "AREAMQZM2": (-0.0001, 0.00025),  # -0.1mm, 0.25mm
             "AREAMQZM3": (0.00015, -0.0003),  # 0.15mm, -0.3mm
+=======
+            "AREAMQZM1": (0.0000, 0.0002),   # 0, 200 μm (was 100 μm)
+            "AREAMQZM2": (0.0001, -0.0003),  # 100, -300 μm (was 30, -120 μm)
+            "AREAMQZM3": (-0.0001, 0.00015), # -100, 150 μm (was -40, 80 μm)
+>>>>>>> Stashed changes
 =======
             "AREAMQZM1": (0.0000, 0.0002),   # 0, 200 μm (was 100 μm)
             "AREAMQZM2": (0.0001, -0.0003),  # 100, -300 μm (was 30, -120 μm)
@@ -92,6 +104,7 @@ def main(args):
     elif args.task == "matched_prior_newtask": 
         # Same as mismatched but prior will be initialized correctly
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         incoming_beam = cheetah.ParameterBeam.from_parameters(
             sigma_x=torch.tensor(1e-4),
             sigma_y=torch.tensor(1e-3),
@@ -103,6 +116,28 @@ def main(args):
             "AREAMQZM1": (0.0003, -0.0002),
             "AREAMQZM2": (-0.0001, 0.00025),
             "AREAMQZM3": (0.00015, -0.0003),
+=======
+        #incoming_beam = cheetah.ParticleBeam.from_parameters(
+        incoming_beam = cheetah.ParameterBeam.from_parameters(
+            #num_particles=10000,  # Use ParticleBeam for bmadx tracking
+            mu_x=torch.tensor(8.2413e-07),
+            mu_px=torch.tensor(5.9885e-08),
+            mu_y=torch.tensor(-1.7276e-06),
+            mu_py=torch.tensor(-1.1746e-07),
+            sigma_x=torch.tensor(0.0002),
+            sigma_px=torch.tensor(3.6794e-06),
+            sigma_y=torch.tensor(0.0001),  # Changed to 0.0001 to from 0.0002
+            sigma_py=torch.tensor(3.6941e-06),
+            sigma_tau=torch.tensor(8.0116e-06),
+            sigma_p=torch.tensor(0.0023),
+            energy=torch.tensor(1.0732e+08),
+            total_charge=torch.tensor(5.0e-13),
+        )
+        misalignment_config = {
+            "AREAMQZM1": (0.0000, 0.0002),   # 0, 200 μm
+            "AREAMQZM2": (0.0001, -0.0003),  # 100, -300 μm
+            "AREAMQZM3": (-0.0001, 0.00015), # -100, 150 μm
+>>>>>>> Stashed changes
 =======
         #incoming_beam = cheetah.ParticleBeam.from_parameters(
         incoming_beam = cheetah.ParameterBeam.from_parameters(
@@ -183,6 +218,7 @@ def main(args):
             elif args.task == "matched_prior_newtask":
                 # Matched prior for new task:  correct beam and misalignments
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
                 incoming_beam = cheetah.ParameterBeam.from_parameters(
                     sigma_x=torch.tensor(1e-4),
                     sigma_y=torch.tensor(1e-3),
@@ -190,6 +226,8 @@ def main(args):
                     sigma_py=torch.tensor(1e-4),
                     energy=torch.tensor(100e6),
 =======
+=======
+>>>>>>> Stashed changes
                 #incoming_beam = cheetah.ParticleBeam.from_parameters(
                 incoming_beam = cheetah.ParameterBeam.from_parameters(
                     #num_particles=10000,  # Use ParticleBeam for bmadx tracking
@@ -205,6 +243,9 @@ def main(args):
                     sigma_p=torch.tensor(0.0023),
                     energy=torch.tensor(1.0732e+08),
                     total_charge=torch.tensor(5.0e-13),
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                 )
                 prior_mean_module = bo_cheetah_prior.AresPriorMean(
@@ -227,6 +268,9 @@ def main(args):
                 prior_mean_module.q2_misalign_y = -0.0003
                 prior_mean_module.q3_misalign_x = -0.0001
                 prior_mean_module.q3_misalign_y = 0.00015
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                 
                 gp_constructor = StandardModelConstructor(
@@ -260,6 +304,7 @@ def main(args):
         # CRITICAL FIX: Use only 1 fixed starting point (like FODO example)
         print(f"  Evaluating initial point...")
         initial_point = {
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
             "q1": 10.0,
             "q2": -10.0,
@@ -268,6 +313,11 @@ def main(args):
             "ch":  0.0,
         })
 =======
+=======
+            "q1": 10.0,
+            "q2": -10.0,
+            "cv": 0.0,
+>>>>>>> Stashed changes
             "q3": 10.0,
             "ch": 0.0,
         }
@@ -281,6 +331,7 @@ def main(args):
         # Start Optimization
         print(f"\n[OPT] Starting optimization for {args.max_evaluation_steps} steps...")
 
+<<<<<<< Updated upstream
 >>>>>>> Stashed changes
         
         # Points 2-5: Random starting points
@@ -295,6 +346,8 @@ def main(args):
                 "ch": np.random. uniform(-0.006, 0.006),
             }
             xopt.evaluate_data(random_point)
+=======
+>>>>>>> Stashed changes
         
         # Start Optimization
         print(f"  Starting optimization...")
@@ -304,7 +357,10 @@ def main(args):
             xopt.step()
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 =======
+=======
+>>>>>>> Stashed changes
             # DIAGNOSTIC: Progress logging every 10 steps
             if (step_num + 1) % 10 == 0:
                 current_best = xopt.data["mae"].min()
