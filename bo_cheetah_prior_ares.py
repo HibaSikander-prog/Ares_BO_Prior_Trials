@@ -1,10 +1,11 @@
 """
-ARES BO Prior - REVISED VERSION using FODO-style manual segment creation
+ARES BO Prior
 
-Key changes from original:
+Description:
+This module defines a Bayesian Optimization prior mean function for the ARES accelerator
 1. Manually create segment elements (like FODO does)
-2. Use learnable offset parameters instead of misalignment attribute
-3. Apply offsets via beam transformation (simple assignment)
+2. Use learnable misalignment parameters
+3. Apply misalignment via beam transformation (simple assignment)
 4. Avoid touching Cheetah's misalignment attribute (which may not be differentiable)
 """
 
@@ -18,15 +19,11 @@ from gpytorch.means import Mean
 from gpytorch.priors import SmoothedBoxPrior
 
 
-# ARES Problem - Modified to accept beam offsets instead of misalignments
+# ARES Problem 
 def ares_problem_with_offsets(
     input_param: Dict[str, float],
     incoming_beam: Optional[cheetah.Beam] = None,
-<<<<<<< Updated upstream
-    misalignment_config: Optional[Dict[str, tuple]] = None,
-=======
     beam_offsets: Optional[Dict[str, tuple]] = None,
->>>>>>> Stashed changes
 ) -> Dict[str, float]:
     """
     Simulate ARES accelerator with beam position offsets.
@@ -47,17 +44,6 @@ def ares_problem_with_offsets(
             - Units: meters
     
     Returns:
-<<<<<<< Updated upstream
-        Dictionary with beam size metrics (mse, log_mse, mae, log_mae)
-    """
-    if incoming_beam is None:
-        incoming_beam = cheetah.ParameterBeam.from_parameters(
-            sigma_x=torch.tensor(1e-4),
-            sigma_y=torch.tensor(2e-3),
-            sigma_px=torch.tensor(1e-4),
-            sigma_py=torch.tensor(1e-4),
-            energy=torch.tensor(100e6),
-=======
         Dictionary with beam metrics (mae, mu_x, mu_y, sigma_x, sigma_y)
     """
     if incoming_beam is None:
@@ -74,27 +60,12 @@ def ares_problem_with_offsets(
             sigma_p=torch.tensor(0.0023),
             energy=torch.tensor(1.0732e+08),
             total_charge=torch.tensor(5.0e-13),
->>>>>>> Stashed changes
         )
     
     # Extract beam offsets (default to zero)
     if beam_offsets is None:
         beam_offsets = {"q1": (0.0, 0.0), "q2": (0.0, 0.0), "q3": (0.0, 0.0)}
     
-<<<<<<< Updated upstream
-    # Set magnet strengths
-    ares_ea.AREAMQZM1.k1 = torch.tensor(input_param["q1"])
-    ares_ea.AREAMQZM2.k1 = torch.tensor(input_param["q2"])
-    ares_ea.AREAMCVM1.angle = torch.tensor(input_param["cv"])
-    ares_ea.AREAMQZM3.k1 = torch.tensor(input_param["q3"])
-    ares_ea.AREAMCHM1.angle = torch.tensor(input_param["ch"])
-    
-    # Apply misalignments if provided
-    if misalignment_config is not None:
-        for magnet_name, (dx, dy) in misalignment_config.items():
-            magnet = getattr(ares_ea, magnet_name)
-            magnet.misalignment = torch.tensor([dx, dy])
-=======
     q1_offset_x, q1_offset_y = beam_offsets.get("q1", (0.0, 0.0))
     q2_offset_x, q2_offset_y = beam_offsets.get("q2", (0.0, 0.0))
     q3_offset_x, q3_offset_y = beam_offsets.get("q3", (0.0, 0.0))
@@ -156,15 +127,9 @@ def ares_problem_with_offsets(
         # Final drift
         cheetah.Drift(length=torch.tensor(0.44999998807907104), name="Drift_to_screen"),
     ]
->>>>>>> Stashed changes
     
     ares_segment = cheetah.Segment(elements=segment_elements)
     
-<<<<<<< Updated upstream
-    # Calculate metrics
-    beam_size_mse = 0.5 * (out_beam.sigma_x**2 + out_beam.sigma_y**2)
-    beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
-=======
     # Apply beam offsets by modifying beam parameters before each quadrupole
     # This is done by propagating through segment piece by piece
     current_beam = incoming_beam
@@ -210,21 +175,16 @@ def ares_problem_with_offsets(
         out_beam.mu_y.abs() + 
         out_beam.sigma_y.abs()
     )
->>>>>>> Stashed changes
     
     return {
-        "mse": beam_size_mse.detach().numpy(),
-        "log_mse": beam_size_mse.log().detach().numpy(),
-        "mae": beam_size_mae.detach().numpy(),
-        "log_mae": beam_size_mae.log().detach().numpy(),
+        "mae": ares_beam_mae.detach().numpy(),
+        "mu_x": out_beam.mu_x.detach().numpy(),
+        "mu_y": out_beam.mu_y.detach().numpy(),
+        "sigma_x": out_beam.sigma_x.detach().numpy(),
+        "sigma_y": out_beam.sigma_y.detach().numpy(),
     }
 
 
-<<<<<<< Updated upstream
-# Prior Mean Functions for BO
-class AresPriorMean(Mean):
-    """ARES Lattice as a prior mean function for BO."""
-=======
 def apply_beam_offset(beam: cheetah.Beam, offset_x: float, offset_y: float) -> cheetah.Beam:
     """
     Apply position offset to beam (simulates misalignment effect).
@@ -266,20 +226,12 @@ class AresPriorMeanRevised(Mean):
     3. Applies offsets via beam transformation (simple assignment)
     4. Avoids Cheetah's misalignment attribute
     """
->>>>>>> Stashed changes
 
     def __init__(self, incoming_beam: Optional[cheetah.Beam] = None):
         super().__init__()
         
         if incoming_beam is None:
             incoming_beam = cheetah.ParameterBeam.from_parameters(
-<<<<<<< Updated upstream
-                sigma_x=torch.tensor(1e-4),
-                sigma_y=torch.tensor(2e-3),
-                sigma_px=torch.tensor(1e-4),
-                sigma_py=torch.tensor(1e-4),
-                energy=torch.tensor(100e6),
-=======
                 mu_x=torch.tensor(8.2413e-07),
                 mu_px=torch.tensor(5.9885e-08),
                 mu_y=torch.tensor(-1.7276e-06),
@@ -292,7 +244,6 @@ class AresPriorMeanRevised(Mean):
                 sigma_p=torch.tensor(0.0023),
                 energy=torch.tensor(1.0732e+08),
                 total_charge=torch.tensor(5.0e-13),
->>>>>>> Stashed changes
             )
         self.incoming_beam = incoming_beam
         
@@ -302,11 +253,6 @@ class AresPriorMeanRevised(Mean):
         )
         self.D1 = cheetah.Drift(length=torch.tensor(0.428), name="Drift_Q1_to_Q2")
         
-<<<<<<< Updated upstream
-        # Define learnable misalignment parameters (6 parameters:  x,y for 3 quadrupoles)
-        # Constraint: misalignments between -0.5mm to 0.5mm (-0.0005m to 0.0005m)
-        misalignment_constraint = Interval(-0.0005, 0.0005)
-=======
         self.Q2 = cheetah.Quadrupole(
             length=torch.tensor(0.122), k1=torch.tensor(0.0), name="AREAMQZM2"
         )
@@ -316,7 +262,6 @@ class AresPriorMeanRevised(Mean):
             length=torch.tensor(0.020), angle=torch.tensor(0.0), name="AREAMCVM1"
         )
         self.D3 = cheetah.Drift(length=torch.tensor(0.204), name="Drift_CV_to_Q3")
->>>>>>> Stashed changes
         
         self.Q3 = cheetah.Quadrupole(
             length=torch.tensor(0.122), k1=torch.tensor(0.0), name="AREAMQZM3"
@@ -390,11 +335,7 @@ class AresPriorMeanRevised(Mean):
             X: Tensor of shape (..., 5) with columns [q1, q2, cv, q3, ch]
         
         Returns:
-<<<<<<< Updated upstream
-            Predicted beam size (MAE)
-=======
             Predicted MAE
->>>>>>> Stashed changes
         """
         # Set magnet strengths (simple assignment, like FODO)
         self.Q1.k1 = X[..., 0]
@@ -403,29 +344,6 @@ class AresPriorMeanRevised(Mean):
         self.Q3.k1 = X[..., 3]
         self.CH.angle = X[..., 4]
         
-<<<<<<< Updated upstream
-        # Apply learnable misalignments
-        self.ares_ea.AREAMQZM1.misalignment = torch.stack([
-            self.q1_misalign_x, 
-            self.q1_misalign_y
-        ])
-        self.ares_ea.AREAMQZM2.misalignment = torch.stack([
-            self.q2_misalign_x,
-            self.q2_misalign_y
-        ])
-        self.ares_ea.AREAMQZM3.misalignment = torch.stack([
-            self.q3_misalign_x,
-            self.q3_misalign_y
-        ])
-        
-        # Simulate beam propagation
-        out_beam = self.ares_ea(self.incoming_beam)
-        beam_size_mae = 0.5 * (out_beam.sigma_x.abs() + out_beam.sigma_y.abs())
-        
-        return beam_size_mae
-
-    # Properties and setters for Q1 misalignments
-=======
         # Propagate beam with offsets applied at each quadrupole
         current_beam = self.incoming_beam
         
@@ -494,7 +412,6 @@ class AresPriorMeanRevised(Mean):
         )
     
     # Properties for Q1 offsets (like drift_length in FODO)
->>>>>>> Stashed changes
     @property
     def q1_offset_x(self):
         return self._q1_offset_x_param(self)
@@ -517,15 +434,9 @@ class AresPriorMeanRevised(Mean):
     def q1_offset_y(self):
         return self._q1_offset_y_param(self)
     
-<<<<<<< Updated upstream
-    @q1_misalign_y.setter
-    def q1_misalign_y(self, value:  torch.Tensor):
-        self._set_q1_misalign_y(self, value)
-=======
     @q1_offset_y.setter
     def q1_offset_y(self, value):
         self._set_q1_offset_y(self, value)
->>>>>>> Stashed changes
     
     def _q1_offset_y_param(self, m):
         return m.raw_q1_offset_y_constraint.transform(self.raw_q1_offset_y)
@@ -542,15 +453,9 @@ class AresPriorMeanRevised(Mean):
     def q2_offset_x(self):
         return self._q2_offset_x_param(self)
     
-<<<<<<< Updated upstream
-    @q2_misalign_x.setter
-    def q2_misalign_x(self, value:  torch.Tensor):
-        self._set_q2_misalign_x(self, value)
-=======
     @q2_offset_x.setter
     def q2_offset_x(self, value):
         self._set_q2_offset_x(self, value)
->>>>>>> Stashed changes
     
     def _q2_offset_x_param(self, m):
         return m.raw_q2_offset_x_constraint.transform(self.raw_q2_offset_x)
@@ -566,15 +471,9 @@ class AresPriorMeanRevised(Mean):
     def q2_offset_y(self):
         return self._q2_offset_y_param(self)
     
-<<<<<<< Updated upstream
-    @q2_misalign_y.setter
-    def q2_misalign_y(self, value: torch.Tensor):
-        self._set_q2_misalign_y(self, value)
-=======
     @q2_offset_y.setter
     def q2_offset_y(self, value):
         self._set_q2_offset_y(self, value)
->>>>>>> Stashed changes
     
     def _q2_offset_y_param(self, m):
         return m.raw_q2_offset_y_constraint.transform(self.raw_q2_offset_y)
@@ -591,15 +490,9 @@ class AresPriorMeanRevised(Mean):
     def q3_offset_x(self):
         return self._q3_offset_x_param(self)
     
-<<<<<<< Updated upstream
-    @q3_misalign_x.setter
-    def q3_misalign_x(self, value: torch.Tensor):
-        self._set_q3_misalign_x(self, value)
-=======
     @q3_offset_x.setter
     def q3_offset_x(self, value):
         self._set_q3_offset_x(self, value)
->>>>>>> Stashed changes
     
     def _q3_offset_x_param(self, m):
         return m.raw_q3_offset_x_constraint.transform(self.raw_q3_offset_x)

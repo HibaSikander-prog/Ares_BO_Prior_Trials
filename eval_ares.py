@@ -1,6 +1,6 @@
-"""Evaluate the ARES optimization task - REVISED VERSION
+"""Evaluate the ARES optimization task 
 
-Uses FODO-style approach with beam offsets instead of misalignment attribute.
+Uses FODO-style approach 
 
 task modes:
     - matched: Optimize the ARES lattice for a matched beam (no offsets).
@@ -9,10 +9,6 @@ task modes:
 """
 
 import os
-<<<<<<< Updated upstream
-
-=======
->>>>>>> Stashed changes
 import numpy as np
 
 import bo_cheetah_prior_ares as bo_ares
@@ -27,11 +23,7 @@ from xopt.generators.sequential.neldermead import NelderMeadGenerator
 
 
 def main(args):
-<<<<<<< Updated upstream
-    # VOCS - 5 magnets:  3 quadrupoles + 2 correctors
-=======
     # VOCS - 5 magnets
->>>>>>> Stashed changes
     vocs_config = """
         variables:
             q1: [-30, 30]
@@ -57,19 +49,6 @@ def main(args):
     elif args.task == "mismatched":
         # Different beam characteristics
         incoming_beam = cheetah.ParameterBeam.from_parameters(
-<<<<<<< Updated upstream
-            sigma_x=torch.tensor(1e-4),
-            sigma_y=torch.tensor(1e-3),  # Changed from 2e-3 to 1e-3
-            sigma_px=torch.tensor(1e-4),
-            sigma_py=torch.tensor(1e-4),
-            energy=torch.tensor(100e6),
-        )
-        # Different misalignments
-        misalignment_config = {
-            "AREAMQZM1": (0.0003, -0.0002),   # 0.3mm, -0.2mm
-            "AREAMQZM2": (-0.0001, 0.00025),  # -0.1mm, 0.25mm
-            "AREAMQZM3": (0.00015, -0.0003),  # 0.15mm, -0.3mm
-=======
             mu_x=torch.tensor(8.2413e-07),
             mu_px=torch.tensor(5.9885e-08),
             mu_y=torch.tensor(-1.7276e-06),
@@ -88,7 +67,6 @@ def main(args):
             "q1": (0.0000, 0.0002),   # 0, 200 μm
             "q2": (0.0001, -0.0003),  # 100, -300 μm
             "q3": (-0.0001, 0.00015), # -100, 150 μm
->>>>>>> Stashed changes
         }
         evaluator = Evaluator(
             function=bo_ares.ares_problem_with_offsets,
@@ -97,21 +75,6 @@ def main(args):
                 "beam_offsets": beam_offsets,
             },
         )
-<<<<<<< Updated upstream
-    elif args.task == "matched_prior_newtask": 
-        # Same as mismatched but prior will be initialized correctly
-        incoming_beam = cheetah.ParameterBeam.from_parameters(
-            sigma_x=torch.tensor(1e-4),
-            sigma_y=torch.tensor(1e-3),
-            sigma_px=torch.tensor(1e-4),
-            sigma_py=torch.tensor(1e-4),
-            energy=torch.tensor(100e6),
-        )
-        misalignment_config = {
-            "AREAMQZM1": (0.0003, -0.0002),
-            "AREAMQZM2": (-0.0001, 0.00025),
-            "AREAMQZM3": (0.00015, -0.0003),
-=======
         print(f"\n📋 Task: mismatched")
         print(f"   Beam: sigma_y = 0.0001 (changed from 0.0002)")
         print(f"   Beam offsets: Q1=(0, 200μm), Q2=(100, -300μm), Q3=(-100, 150μm)")
@@ -135,7 +98,6 @@ def main(args):
             "q1": (0.0000, 0.0002),
             "q2": (0.0001, -0.0003),
             "q3": (-0.0001, 0.00015),
->>>>>>> Stashed changes
         }
         evaluator = Evaluator(
             function=bo_ares.ares_problem_with_offsets,
@@ -167,37 +129,6 @@ def main(args):
             print("Generator: BO with zero mean")
             
         elif args.optimizer == "BO_prior":
-<<<<<<< Updated upstream
-            if args.task == "matched": 
-                # Matched case:  prior with default beam, no misalignments, not trainable
-                prior_mean_module = bo_cheetah_prior.AresPriorMean()
-                # Initialize all misalignments to zero (default)
-                prior_mean_module.q1_misalign_x = 0.0
-                prior_mean_module.q1_misalign_y = 0.0
-                prior_mean_module.q2_misalign_x = 0.0
-                prior_mean_module.q2_misalign_y = 0.0
-                prior_mean_module.q3_misalign_x = 0.0
-                prior_mean_module.q3_misalign_y = 0.0
-                
-                gp_constructor = StandardModelConstructor(
-                    mean_modules={"mae": prior_mean_module}
-                )
-                
-            elif args.task == "mismatched":
-                # Mismatched case: prior trained on "old" problem, allow training
-                prior_mean_module = bo_cheetah_prior.AresPriorMean()
-                # Initialize with "old" misalignments (zero)
-                prior_mean_module.q1_misalign_x = 0.0
-                prior_mean_module.q1_misalign_y = 0.0
-                prior_mean_module.q2_misalign_x = 0.0
-                prior_mean_module.q2_misalign_y = 0.0
-                prior_mean_module.q3_misalign_x = 0.0
-                prior_mean_module.q3_misalign_y = 0.0
-                
-                gp_constructor = StandardModelConstructor(
-                    mean_modules={"mae":  prior_mean_module},
-                    trainable_mean_keys=["mae"],  # Allow the prior to adapt
-=======
             if args.task == "matched":
                 prior_mean_module = bo_ares.AresPriorMeanRevised()
                 gp_constructor = StandardModelConstructor(
@@ -221,21 +152,11 @@ def main(args):
                     mean_modules={"mae": prior_mean_module},
                     trainable_mean_keys=["mae"],  # Make it trainable!
                     use_low_noise_prior=False,
->>>>>>> Stashed changes
                 )
                 print("Generator: BO with mismatched prior (trainable)")
                 print("  Initial offsets: all zeros (will learn true values)")
                 
             elif args.task == "matched_prior_newtask":
-<<<<<<< Updated upstream
-                # Matched prior for new task:  correct beam and misalignments
-                incoming_beam = cheetah.ParameterBeam.from_parameters(
-                    sigma_x=torch.tensor(1e-4),
-                    sigma_y=torch.tensor(1e-3),
-                    sigma_px=torch.tensor(1e-4),
-                    sigma_py=torch.tensor(1e-4),
-                    energy=torch.tensor(100e6),
-=======
                 incoming_beam_prior = cheetah.ParameterBeam.from_parameters(
                     mu_x=torch.tensor(8.2413e-07),
                     mu_px=torch.tensor(5.9885e-08),
@@ -249,20 +170,10 @@ def main(args):
                     sigma_p=torch.tensor(0.0023),
                     energy=torch.tensor(1.0732e+08),
                     total_charge=torch.tensor(5.0e-13),
->>>>>>> Stashed changes
                 )
                 prior_mean_module = bo_ares.AresPriorMeanRevised(
                     incoming_beam=incoming_beam_prior
                 )
-<<<<<<< Updated upstream
-                # Initialize with correct misalignments
-                prior_mean_module.q1_misalign_x = 0.0003
-                prior_mean_module.q1_misalign_y = -0.0002
-                prior_mean_module.q2_misalign_x = -0.0001
-                prior_mean_module.q2_misalign_y = 0.00025
-                prior_mean_module.q3_misalign_x = 0.00015
-                prior_mean_module.q3_misalign_y = -0.0003
-=======
                 # Initialize with CORRECT values
                 prior_mean_module.q1_offset_x = 0.0000
                 prior_mean_module.q1_offset_y = 0.0002
@@ -270,17 +181,17 @@ def main(args):
                 prior_mean_module.q2_offset_y = -0.0003
                 prior_mean_module.q3_offset_x = -0.0001
                 prior_mean_module.q3_offset_y = 0.00015
->>>>>>> Stashed changes
                 
                 gp_constructor = StandardModelConstructor(
                     mean_modules={"mae": prior_mean_module}
+                    # NOT trainable (already correct)
                 )
                 print("Generator: BO with matched prior (correct values, not trainable)")
             
             generator = UpperConfidenceBoundGenerator(
                 beta=2.0, vocs=vocs, gp_constructor=gp_constructor
             )
-            
+ 
         elif args.optimizer == "NM":
             generator = NelderMeadGenerator(vocs=vocs)
             print("Generator: Nelder-Mead simplex")
@@ -296,53 +207,12 @@ def main(args):
             max_evaluations=args.max_evaluation_steps,
         )
         
-<<<<<<< Updated upstream
-         # Evaluate 5 initial points
-        # Point 1: Fixed starting point
-        print(f"  Evaluating initial point 1/5 (fixed)")
-        xopt.evaluate_data({
-=======
         # Fixed starting point
         initial_point = {
->>>>>>> Stashed changes
             "q1": 10.0,
             "q2": -10.0,
-            "q3": 10.0,
-<<<<<<< Updated upstream
             "cv": 0.0,
-            "ch":  0.0,
-        })
-        
-        # Points 2-5: Random starting points
-        np.random.seed(args.seed + i)  # Different seed for each trial
-        for j in range(4):
-            print(f"  Evaluating initial point {j+2}/5 (random)")
-            random_point = {
-                "q1": np.random.uniform(-30, 30),
-                "q2": np.random.uniform(-30, 30),
-                "q3":  np.random.uniform(-30, 30),
-                "cv":  np.random.uniform(-0.006, 0.006),
-                "ch": np.random. uniform(-0.006, 0.006),
-            }
-            xopt.evaluate_data(random_point)
-        
-        # Start Optimization
-        print(f"  Starting optimization...")
-        
-        # Start Optimization
-        for _ in tqdm.tqdm(range(args.max_evaluation_steps)):
-            xopt.step()
-
-        # Post processing the dataframes
-        xopt.data.index.name = "step"
-        xopt.data["run"] = i
-        xopt.data["best_mae"] = xopt.data["mae"].cummin()
-        for col in xopt.data.columns:
-            xopt.data[col] = xopt.data[col].astype(float)
-        df = pd.concat([df, xopt.data])
-    
-    # Check if the output directory exists
-=======
+            "q3": 10.0,
             "ch": 0.0,
         }
         
@@ -419,15 +289,11 @@ def main(args):
         print(f"Best MAE: {xopt.data['mae'].min():.6e}")
 
     # Save results
->>>>>>> Stashed changes
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
     
     out_filename = f"{args.output_dir}/{args.optimizer}_{args.task}_revised.csv"
     df.to_csv(out_filename)
-<<<<<<< Updated upstream
-    print(f"Results saved to {out_filename}")
-=======
     
     print(f"\n{'='*70}")
     print(f"✅ ALL TRIALS COMPLETE")
@@ -455,7 +321,6 @@ def main(args):
             print(f"  Ground truth: 0.000200 m")
             print(f"  Mean error: {abs(final_offsets.mean() - 0.0002)*1e6:.1f} μm")
     # ========== END NEW CODE ==========
->>>>>>> Stashed changes
 
 
 if __name__ == "__main__":
@@ -508,4 +373,9 @@ if __name__ == "__main__":
     )
     
     args = parser.parse_args()
+    
+    # Set random seed
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    
     main(args)
