@@ -137,7 +137,6 @@ def main(args):
                 prior_mean_module = bo_ares.AresPriorMeanRevised()
                 gp_constructor = StandardModelConstructor(
                     mean_modules={"mae": prior_mean_module},
-                    use_low_noise_prior=True,  # Deterministic simulation
                 )
                 print("Generator: BO with matched prior (not trainable)")
                 
@@ -189,7 +188,6 @@ def main(args):
                 
                 gp_constructor = StandardModelConstructor(
                     mean_modules={"mae": prior_mean_module},
-                    use_low_noise_prior=True,  # Deterministic, correct prior
                 )
                 print("Generator: BO with matched prior (correct values, not trainable)")
                 print("  Offset values:")
