@@ -46,9 +46,7 @@ def main(args):
         )
     elif args.task == "mismatched":
         # Different beam characteristics
-        #incoming_beam = cheetah.ParticleBeam.from_parameters(
         incoming_beam = cheetah.ParameterBeam.from_parameters(
-            #num_particles=10000,  # Use ParticleBeam for bmadx tracking
             mu_x=torch.tensor(8.2413e-07),
             mu_px=torch.tensor(5.9885e-08),
             mu_y=torch.tensor(-1.7276e-06),
@@ -77,9 +75,7 @@ def main(args):
         )
     elif args.task == "matched_prior_newtask":  
         # Same as mismatched but prior will be initialized correctly
-        #incoming_beam = cheetah.ParticleBeam.from_parameters(
         incoming_beam = cheetah.ParameterBeam.from_parameters(
-            #num_particles=10000,  # Use ParticleBeam for bmadx tracking
             mu_x=torch.tensor(8.2413e-07),
             mu_px=torch.tensor(5.9885e-08),
             mu_y=torch.tensor(-1.7276e-06),
@@ -153,10 +149,8 @@ def main(args):
                 )
                 
             elif args.task == "matched_prior_newtask":
-                # Matched prior for new task:  correct beam and misalignments
-                #incoming_beam = cheetah.ParticleBeam.from_parameters(
+                # Matched prior for new task:  correct beam and misalignments, not trainable
                 incoming_beam = cheetah.ParameterBeam.from_parameters(
-                    #num_particles=10000,  # Use ParticleBeam for bmadx tracking
                     mu_x=torch.tensor(8.2413e-07),
                     mu_px=torch.tensor(5.9885e-08),
                     mu_y=torch.tensor(-1.7276e-06),
@@ -173,8 +167,7 @@ def main(args):
                 prior_mean_module = bo_cheetah_prior.AresPriorMean(
                     incoming_beam=incoming_beam
                 )
-                # Initialize with CORRECT values (matched to evaluator)
-                # Like FODO's drift_length=0.7 when truth is 0.7
+
                 prior_mean_module.q1_misalign_x = 0.0000
                 prior_mean_module.q1_misalign_y = 0.0002
                 prior_mean_module.q2_misalign_x = 0.0001
@@ -182,11 +175,6 @@ def main(args):
                 prior_mean_module.q3_misalign_x = -0.0001
                 prior_mean_module.q3_misalign_y = 0.00015
 
-                # Directly set misalignments on Cheetah elements (like FODO)
-                # NOT using property setters!
-              #  prior_mean_module.ares_ea.AREAMQZM1.misalignment = torch.tensor([0.0000, 0.0002])
-               # prior_mean_module.ares_ea.AREAMQZM2.misalignment = torch.tensor([0.0001, -0.0003])
-                #prior_mean_module.ares_ea.AREAMQZM3.misalignment = torch.tensor([-0.0001, 0.00015])
                 
                 gp_constructor = StandardModelConstructor(
                     mean_modules={"mae": prior_mean_module}
@@ -267,10 +255,6 @@ def main(args):
         xopt.data.index.name = "step"
         xopt.data["run"] = i
         xopt.data["best_mae"] = xopt.data["mae"].cummin()
-
-        # Also track best_mae for comparison
-        #if "mae" in xopt.data.columns:
-         #   xopt.data["best_mae"] = xopt.data["mae"].cummin()
 
         # Save learned misalignments if using BO_prior
         if args.optimizer == "BO_prior" and args.task in ["mismatched", "matched_prior_newtask"]:

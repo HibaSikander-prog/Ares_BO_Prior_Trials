@@ -33,9 +33,7 @@ def ares_problem(
         Dictionary with beam metrics (mae, position_error, combined objective)
     """
     if incoming_beam is None:
-        #incoming_beam = cheetah.ParticleBeam.from_parameters(
         incoming_beam = cheetah.ParameterBeam.from_parameters(
-            #num_particles=10000,  # Use ParticleBeam for bmadx tracking
             mu_x=torch.tensor(8.2413e-07),
             mu_px=torch.tensor(5.9885e-08),
             mu_y=torch.tensor(-1.7276e-06),
@@ -53,12 +51,6 @@ def ares_problem(
     # Load ARES lattice and extract the section of interest
     ares_segment = cheetah.Segment.from_lattice_json("ARESlatticeStage3v1_9.json")
     ares_ea = ares_segment.subcell("AREASOLA1", "AREABSCR1")
-    
-    # Set tracking method to bmadx for quadrupoles (required for misalignments)
-  #  ares_ea.AREAMQZM1.t
-  # racking_method = "bmadx"
- #   ares_ea.AREAMQZM2.tracking_method = "bmadx"
-  #  ares_ea.AREAMQZM3.tracking_method = "bmadx"
     
     # Set magnet strengths
     ares_ea.AREAMQZM1.k1 = torch.tensor(input_param["q1"])
@@ -104,9 +96,7 @@ class AresPriorMean(Mean):
         super().__init__()
         
         if incoming_beam is None:
-            #incoming_beam = cheetah.ParticleBeam.from_parameters(
             incoming_beam = cheetah.ParameterBeam.from_parameters(
-                #num_particles=10000,  # Use ParticleBeam for bmadx tracking
                 mu_x=torch.tensor(8.2413e-07),
                 mu_px=torch.tensor(5.9885e-08),
                 mu_y=torch.tensor(-1.7276e-06),
@@ -126,13 +116,6 @@ class AresPriorMean(Mean):
         ares_segment = cheetah.Segment.from_lattice_json("ARESlatticeStage3v1_9.json")
         self.ares_ea = ares_segment.subcell("AREASOLA1", "AREABSCR1")
         
-        # Set tracking method to bmadx for all quadrupoles
-       # self.ares_ea.AREAMQZM1.tracking_method = "bmadx"
-        #self.ares_ea.AREAMQZM2.tracking_method = "bmadx"
-        #self.ares_ea.AREAMQZM3.tracking_method = "bmadx"
-        
-        # Define learnable misalignment parameters (6 parameters:  x,y for 3 quadrupoles)
-        # Constraint: misalignments between -0.5mm to 0.5mm (-0.0005m to 0.0005m)
         misalignment_constraint = Interval(-0.0005, 0.0005)
         
         # AREAMQZM1 misalignments
@@ -206,23 +189,7 @@ class AresPriorMean(Mean):
         self.ares_ea.AREAMCVM1.angle = X[..., 2]
         self.ares_ea.AREAMQZM3.k1 = X[..., 3]
         self.ares_ea.AREAMCHM1.angle = X[..., 4]
-        
-        # Apply learnable misalignments
-        #self.ares_ea.AREAMQZM1.misalignment = torch.stack([
-         #   self.q1_misalign_x, 
-          #  self.q1_misalign_y
-        #], dim=0)
-        #self.ares_ea.AREAMQZM2.misalignment = torch.stack([
-         #   self.q2_misalign_x,
-          #  self.q2_misalign_y
-        #], dim=0)
-        #self.ares_ea.AREAMQZM3.misalignment = torch.stack([
-         #   self.q3_misalign_x,
-          #  self.q3_misalign_y
-        #], dim=0)
 
-        # Apply learnable misalignments - KEEP YOUR ORIGINAL torch.stack() approach
-        # BUT add diagnostic prints and safety checks
         misalign_q1 = torch.stack([
             self.q1_misalign_x, 
             self.q1_misalign_y
@@ -236,27 +203,6 @@ class AresPriorMean(Mean):
             self.q3_misalign_y
         ], dim=0)
         
-        # DIAGNOSTIC: Print shapes (remove after debugging)
-       # if not hasattr(self, '_printed_shapes'):
-        #    print(f"\n[DIAGNOSTIC] Misalignment tensor shapes:")
-         #   print(f"  q1_misalign_x type: {type(self.q1_misalign_x)}")
-          #  print(f"  q1_misalign_x shape: {self.q1_misalign_x.shape if hasattr(self.q1_misalign_x, 'shape') else 'no shape'}")
-           # print(f"  misalign_q1 shape: {misalign_q1.shape}")
-            #print(f"  Expected shape: torch.Size([2])")
-            #self._printed_shapes = True
-        
-        # SAFETY CHECK: Assert correct shape
-        #try:
-         #   assert misalign_q1.shape == torch.Size([2]), \
-          #      f"Q1 misalignment shape error: expected [2], got {misalign_q1.shape}"
-           # assert misalign_q2.shape == torch.Size([2]), \
-            #    f"Q2 misalignment shape error: expected [2], got {misalign_q2.shape}"
-            #assert misalign_q3.shape == torch.Size([2]), \
-             #   f"Q3 misalignment shape error: expected [2], got {misalign_q3.shape}"
-       # except AssertionError as e:
-        #    print(f"\n[ERROR] {e}")
-         #   print(f"[ERROR] This means the tensor shape fix IS needed!")
-          #  raise
         
         self.ares_ea.AREAMQZM1.misalignment = misalign_q1
         self.ares_ea.AREAMQZM2.misalignment = misalign_q2
@@ -266,7 +212,7 @@ class AresPriorMean(Mean):
         # Simulate beam propagation
         out_beam = self.ares_ea(self.incoming_beam)
 
-           # Calculate MAE (Mean Absolute Error) - must match problem function!
+        # Calculate MAE (Mean Absolute Error) - must match problem function!
         ares_beam_mae = 0.25 * (
         out_beam.mu_x.abs() + 
         out_beam.sigma_x.abs() + 
@@ -276,7 +222,6 @@ class AresPriorMean(Mean):
        
         return ares_beam_mae
         
-        #return beam_size_mae
 
     # Properties and setters for Q1 misalignments
     @property
