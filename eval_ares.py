@@ -10,7 +10,7 @@ import os
 import time
 import numpy as np
 
-import bo_cheetah_prior_ares_alphabeticalmagnets as bo_cheetah_prior
+import bo_cheetah_prior_ares as bo_cheetah_prior
 import cheetah
 import pandas as pd
 import torch
@@ -360,7 +360,7 @@ if __name__ == "__main__":
         "--output_dir",
         "-o",
         type=str,
-        default="data/",
+        default="data_10trials_100itr/",
         help="Output directory for results.",
     )
     parser.add_argument(

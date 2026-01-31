@@ -88,7 +88,7 @@ def ares_problem(
     }
 
 
-# Prior Mean Functions for BO (FIXED)
+# Prior Mean Functions for BO 
 class AresPriorMean(Mean):
     """ARES Lattice as a prior mean function for BO with trainable misalignments."""
     

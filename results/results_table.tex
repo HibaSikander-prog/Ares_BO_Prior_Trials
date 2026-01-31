@@ -1,0 +1,17 @@
+\begin{table}[htbp]
+\centering
+\caption{Performance of optimization algorithms on ARES beam tuning}
+\label{tab:ares_results}
+\small
+\begin{tabular}{lcccc}
+\toprule
+Optimizer & Final Error (mm) & RMSE (mm) & Improvement (\%) & Success \\
+& Median / Mean $\pm$ Std & Median / Mean $\pm$ Std & Median / Mean $\pm$ Std & Rate \\
+\midrule
+Nelder-Mead & 0.067 / 0.067 $\pm$ 0.000 & 0.149 / 0.149 $\pm$ 0.000 & 83.7 / 83.7 $\pm$ 0.0 & 0\% \\
+BO (zero mean) & 0.046 / 0.046 $\pm$ 0.015 & 0.179 / 0.181 $\pm$ 0.018 & 88.9 / 88.8 $\pm$ 3.6 & 20\% \\
+BO\_prior (mismatched) & 0.006 / 0.007 $\pm$ 0.002 & 0.071 / 0.073 $\pm$ 0.008 & 98.4 / 98.4 $\pm$ 0.4 & 100\% \\
+BO\_prior (matched) & 0.006 / 0.006 $\pm$ 0.001 & 0.060 / 0.060 $\pm$ 0.001 & 98.5 / 98.5 $\pm$ 0.3 & 100\% \\
+\bottomrule
+\end{tabular}
+\end{table}
