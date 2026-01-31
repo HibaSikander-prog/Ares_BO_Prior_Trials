@@ -1,0 +1,17 @@
+ % Project description
+\def\projectdescription{
+	Das invertierte Stabpendel, ECP Model 505, ist ein in Lehre und Forschung eingesetztes System, welches eine orthogonal zum Pendelstab verfahrbare Stange und als Messgrößen die Position der Stange als auch den Winkel des Pendelstabs besitzt \cite{ECPInvertedPendulum}. Das System kann sowohl als vollaktuiertes SISO als auch als unteraktuiertes SIMO System betrachtet werden. Die Dynamik des Pendels kann durch anbringen von Gewichten sowohl an der Balancestange als auch am Pendelstab von einfach regelbar bis hin zu theoretisch nicht regelbar verändert werden. Das System besitzt kinematische und gravitationsbedingte Nichtlinearitäten.
+	Ziel dieser Arbeit sind die Modellierung des Systems und der Entwurf eines Reglers zur Stabilisierung des Pendels in seinem linearisierten Arbeitspunkt unter Einfluss von Eingangs- und Modellstörungen. Ebenfalls untersucht werden sollen Möglichkeiten zur automatischen Anpassung von Parametern an diese Strecke, \cite{aastrom1995pid}.
+}
+
+ % Project tasks
+\def\tasks{
+\begin{packedenumerate}
+	\item Implement BO with Cheetah prior for tuning the transverse beam parameters on a simulation of the ARES Experimental Area.
+	\item Evaluate the BO with Cheetah prior implementation in accordance with the evaluation in [4].
+	\item Evaluate timing and speed of BO with an uninformed prior vs. BO with a Cheetah informed prior.
+	\item Study performance under model uncertainties.
+	\item (Optional depending on accelerator availability) Evaluate the developed implementation on the real ARES accelerator in accordance with [4].
+	\item (Optional if time allows) Setup a general implementation of BO with Cheetah.
+\end{packedenumerate}
+}
