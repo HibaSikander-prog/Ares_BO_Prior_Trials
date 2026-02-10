@@ -1,17 +1,44 @@
  % Project description
 \def\projectdescription{
-	Das invertierte Stabpendel, ECP Model 505, ist ein in Lehre und Forschung eingesetztes System, welches eine orthogonal zum Pendelstab verfahrbare Stange und als Messgrößen die Position der Stange als auch den Winkel des Pendelstabs besitzt \cite{ECPInvertedPendulum}. Das System kann sowohl als vollaktuiertes SISO als auch als unteraktuiertes SIMO System betrachtet werden. Die Dynamik des Pendels kann durch anbringen von Gewichten sowohl an der Balancestange als auch am Pendelstab von einfach regelbar bis hin zu theoretisch nicht regelbar verändert werden. Das System besitzt kinematische und gravitationsbedingte Nichtlinearitäten.
-	Ziel dieser Arbeit sind die Modellierung des Systems und der Entwurf eines Reglers zur Stabilisierung des Pendels in seinem linearisierten Arbeitspunkt unter Einfluss von Eingangs- und Modellstörungen. Ebenfalls untersucht werden sollen Möglichkeiten zur automatischen Anpassung von Parametern an diese Strecke, \cite{aastrom1995pid}.
+The tuning of particle accelerators is a time-consuming and difficult task that continues
+to be performed manually in many cases, reducing the scientific output of some of the
+most advanced but also costly research facilities in the world. In the field of autonomous
+accelerator tuning, researchers aim to develop methods that assist human operators and
+thereby reduce tuning times and extend the experimental capabilities of accelerators. One
+of the most promising approaches to solve the autonomous accelerator tuning problem is
+the use of Bayesian Optimisation (BO), which is already successfully used in operations. \cite{roussel2024bo} \
+
+However, the most interesting accelerator tuning tasks are characterised by their high
+dimensionality. Despite being more capable at dealing with many dimensions than
+other algorithms, BO struggles to solve optimisations problems with more than a few
+dozen dimensions. To solve this challenge, researchers have proposed to leverage domain
+knowledge by replacing the commonly used but uninformative zero mean prior with a
+model of the system under optimisation. So far neural networks have been used for this
+purpose as they are differentiable and fast to compute. \cite{boltz2025priormeanmodule} While this work has shown the
+advantages of using an informed neural network prior, neural networks come with the
+disadvantage that they require large amounts of data to be trained, and that outside of the
+training data domain, their behaviour is ill-defined. In recent developments, high-speed
+differentiable simulators such as Cheetah \cite{kaiser2024bridging} have been proposed as an alternative for use
+as a prior in BO, with the key advantage that they do not require any training data, and
+are well-behaved throughout. \cite{kaiser2024bridging} \
+
+The goal of this research project is to take the BO with Cheetah prior approach presented
+on a very simple example in \cite{kaiser2024bridging}, and implement it on the closer-to-real world as well as
+more complex transverse beam parameter tuning task at the ARES accelerator, which has
+already been extensively studied with other autonomous tuning methods. The developed
+implementation should then be evaluated according to previous evaluations, to establish
+how this improved variation of BO compares to other methods and whether extension to
+even more complex accelerator tuning tasks is a promising avenue for future research.
 }
 
  % Project tasks
 \def\tasks{
 \begin{packedenumerate}
 	\item Implement BO with Cheetah prior for tuning the transverse beam parameters on a simulation of the ARES Experimental Area.
-	\item Evaluate the BO with Cheetah prior implementation in accordance with the evaluation in [4].
+	\item Evaluate the BO with Cheetah prior implementation in accordance with the evaluation in \cite{kaiser2024rl}.
 	\item Evaluate timing and speed of BO with an uninformed prior vs. BO with a Cheetah informed prior.
 	\item Study performance under model uncertainties.
-	\item (Optional depending on accelerator availability) Evaluate the developed implementation on the real ARES accelerator in accordance with [4].
-	\item (Optional if time allows) Setup a general implementation of BO with Cheetah.
+	\item \textbf{(Optional depending on accelerator availability)} Evaluate the developed implementation on the real ARES accelerator in accordance with \cite{kaiser2024rl}.
+	\item \textbf{(Optional if time allows)} Setup a general implementation of BO with Cheetah.
 \end{packedenumerate}
 }

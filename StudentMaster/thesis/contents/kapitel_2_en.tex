@@ -1,94 +1,183 @@
-\section{Scientific Writing}	\label{a:stil_en}
+\section{Theory}	\label{a:stil_en}
 
-The following hints are taken from the Writing-Coach, developed at the Essen University, \cite{BuBiPo00}. On that German homepage
-\begin{center}
-\href{http://www.uni-essen.de/schreibwerkstatt/trainer}
-{http://www.uni-essen.de/schreibwerkstatt/trainer}.
-\end{center} 
-much more can be found about scientific writing in German. Nevertheless lots of help in English can be found on the Internet.
-Also check out \cite{Fe13}.
+In this chapter, the theoretical foundations of this work are developed. We begin with Gaussian processes as probabilistic function approximators, 
+present Bayesian optimization as a framework for sample efficient black-box optimization and then eventually look over the Cheetah simulator and the 
+ARES accelerator where the work is used and how physics informed knowledge may be integrated through the prior mean function.
 
 
-\subsection{Correctness}
+\subsection{Gaussian Process}
 
-Your writing should be as accurate as possible. Do not use colloquial language, neither filler or vogue words.
-As such, technical/scientific writing style serves a purpose: to transport information as efficiently as possible.
+Gaussian process (GP) offers a robust framework for regression which allows uncertainty quantification along with predictions. GPs are well suited for 
+modeling unknown objectives in optimization problems \cite{roussel2024bo} because they define probability distributions directly over functions, unlike parametric models 
+that learn a predefined set of weights. A Gaussian process is fully specified by its mean function $m(x)$ and covariance function (kernel) $k(x,x’)$ that encodes 
+assumptions about the function’s smoothness:
+\begin{equation}
+f(x) \sim \mathcal{GP}(m(x), k(x,x’))
+\end{equation}
 
-Respect the rules of grammar, spelling and punctuation. Text, sentences or words used in the wrong context, can 
-lead to misunderstandings or may be hard to understand. The sentences in text documents need to be complete.
+The kernel carries assumptions regarding smoothness and correlation between points, the mean function encodes previous expectations regarding the behavior of the function. 
+The kernel selection determines what kind of functions the GP considers probable. Because of its ability in modeling smooth, physically realistic functions without assuming 
+infinite differentiability,  Mat\'ern-5/2 kernel is widely used in Bayesian Optimization \cite{roussel2024bo}. The GP uses Bayes’s rule (formula for baye’s rule) to update 
+from prior to posterior when we observe data. The posterior mean remains Gaussian, with mean and variance that reflects both our prior assumption and observed evidence. 
+One of the important characteristics is that posterior uncertainty is low in areas with dense observations and high in areas with sparse data, this natural uncertainty 
+quantification is what makes GPs useful for guiding optimization.
 
-It is clear that the results of your work, e.g., experiments, are documented correctly, even though they might have had unexpected outcomes.
-Otherwise you do not only cause harm to you but any further research. 
+\subsection{Bayesian Optimization}
+Bayesian Optimization (BO) is a sequential method for determining the optimal value of expensive black-box functions \cite{roussel2024bo}. It is especially effective when gradient information 
+is not available and each function evaluation is expensive. Because of these characteristics, BO is ideally suited for accelerator tuning, where it has emerged as a cutting-edge 
+method \cite{jalas2021bolaserplasma} \cite{Duris2020bofreeelectron}. The goal is to solve:
+
+\begin{equation}
+    \label{eq_optFormulation}
+    x^* = \arg\min_{x \in \mathcal{X}} f(x)
+\end{equation}
+
+Here, $x$ represents the control variables (like magnet settings), $\mathcal{X}$ is the search space and $f(x)$ is the quantity to be minimised (beam error in our case). BO aims to find $x^*$ using as 
+few function evaluation as possible. The key idea is to use a probabilistic surrogate model (usually a GP) to guide the search rather than evaluating the expensive function everywhere. \
+
+As shown in Figure~\ref{fig:bayesian_optimization_loop}, the optimization process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition 
+function. Exploration (sampling when uncertainty is large) and exploitation (sampling where the predicted value is good) are balanced by the acquisition function. After evaluating the true objective at the 
+selected point, we update the dataset and repeat until the evaluation budget is exhausted.
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+    node distance=1.0cm,
+    block/.style={
+        rectangle, 
+        draw=black!60, 
+        fill=black!5, 
+        thick,
+        minimum width=6cm, 
+        minimum height=1.2cm, 
+        text centered, 
+        rounded corners=4pt,
+        drop shadow={shadow xshift=1pt, shadow yshift=-1pt, black!30!gray}
+    },
+    arrow/.style={
+        ->, 
+        >=stealth, 
+        thick,
+        black!80!black
+    },
+    repeat/.style={
+        font=\bfseries\small,
+        color=black!70!black
+    }
+]
+
+% Nodes (vertical flow)
+% Replace all the problematic node lines with this:
+
+\node[block] (init) {\parbox{5.5cm}{\centering\textbf{Initialisation} \\ (Random samples)}};
+\node[block, below=of init] (gp) {\parbox{5.5cm}{\centering\textbf{Fit GP Model} \\ $f \sim GP(m, k)$}};
+\node[block, below=of gp] (acq) {\parbox{5.5cm}{\centering\textbf{Optimise Acquisition} \\ $x_{t+1} = \arg\max \alpha$}};
+\node[block, below=of acq] (eval) {\parbox{5.5cm}{\centering\textbf{Evaluate Objective} \\ $y_{t+1} = f(x_{t+1})$}};
+\node[block, below=of eval] (update) {\parbox{5.5cm}{\centering\textbf{Update Dataset} \\ $D_{t+1} = D_t \cup \{\text{new}\}$}};
+
+% Main flow arrows
+\draw[arrow] (init) -- (gp);
+\draw[arrow] (gp) -- (acq);
+\draw[arrow] (acq) -- (eval);
+\draw[arrow] (eval) -- (update);
+
+% Loop back arrow with "Repeat" label
+\draw[arrow, black!70!black, thick] 
+    (update.south) -- ++(0,-0.8) 
+    -| ++(-3.8,0) 
+    |- node[repeat, pos=0.2, left] {Repeat} ([xshift=-0.3cm]gp.west);
+
+\end{tikzpicture}
+\caption{The Bayesian optimisation loop.}
+\label{fig:bayesian_optimization_loop}
+\end{figure}
 
 
-\subsection{Comprehensibility}
+In this project work, the predicted mean and uncertainty are directly combined using the Upper Confidence Bound (UCB) acquisition function:
+\begin{equation}
+    \alpha_{UCB}(x) = \mu(x) + \beta \sigma(x)
+\end{equation}
 
-Correctness does not imply comprehensibility. Look at your text from the readers point of view: Consider his or her position, previous knowledge
-and attitude. Formulate as precisely as possible but not more than necessary. Therefore, 
+where $\mu(x)$ and $\sigma(x)$ are the GP posterior mean and standard deviation respectively. The parameter $\beta$ controls the exploration-exploitation trade-off. 
+For minimization, this formulation prefers points that either have low predicted values (exploitation) or high uncertainty (exploration). We use $\beta$ = 2.0 throughout this project work, following the common practice \cite{roussel2024bo} .
+
+\subsection{Physics Informed Prior Mean Function}
+
+Before any data is observed, our belief about the objective is represented by the prior mean function $\mu(x)$. The standard practice is to use zero or constant mean, which assumes no prior knowledge. 
+However, physics models that approximate the system are often used in scientific applications, incorporating this knowledge can significantly improve the performance \cite{boltz2025priormeanmodule} . \
+
+To understand why, consider the GP posterior mean prediction at a new point. The GP learns to predict the difference between the prior mean and the actual function. These residuals are small and can be 
+learned from fewer observations when the prior mean is accurate. Whereas when the prior is simply zero, the GP has to learn the entire function from scratch. This motivates using a physics informed similar as the prior mean:
+
+\begin{equation}
+    m(x) = f_{physics}(x; \theta)
+\end{equation}
+
+Where $\theta$ represents the model parameters like element alignments or beam characteristics. This benefits to improve sample efficiency, have meaningful predictions before observing data and physical consistency in extrapolation.\
+
+A key innovation in this work is making the physics model parameters $\theta$ trainable alongside the standard GP hyperparameters. In standard GP practice, the kernel hyperparameters $\omega$ (length scales, signal variance) and 
+noise variance are estimated by maximising the log marginal likelihood of observed data \cite{williams2006gaussian} . As theeta influences the prior mean predictions, it can be included in this optimisation. 
+
+
+\begin{equation}
+    \theta^* = \arg\max_\theta \log p(y | X, \theta, \omega)
+\end{equation}
+
+For this optimization to work, the physics similar must be differentiable so that we can compute how changes in the model parameters $\theta$ affect the marginal likelihood. Cheetah satisfies this requirement through its PyTorch implementation. 
+As the optimization progresses and more data is collected, the GP fitting process automatically adjusts the physics model parameters to better match the observed beam behavior. This is the type of online system identification where the model 
+learns hidden system parameters as a byproduct of optimization itself, eliminating the need for calibration experiments. In this project, we use this approach to learn quadrupole misalignments  which are small transverse offsets that effect 
+the beam steering but cannot be directly measured during accelerator operation.
+
+
+
+\subsection{Cheetah Based Differential Simulation Library}
+
+Using physics knowledge based simulator as a prior mean function requires two key properties: the simulator must be fast enough to call within each GP evaluation, and the simulator must be differentiable in order to facilitate gradient based 
+hyperparameter optimization. A beam dynamics code called Cheetah \cite{kaiser2024bridging} was created to satisfy these needs.  Cheetah uses transfer matrix concept to depict beam transport. For linear optics, each accelerator element transforms 
+the beam’s phase space coordinates through a 7x7 transfer matrix. The standard 6x6 transfer matrix Ro is embedded within this structure, with the additional dimension enabling representation of effects such as magnet misalignments. 
+When compared to conventional simulation codes, Cheetah achieves speedups of several orders of magnitude through optimized tensor computation and automatic transfer map reduction. Moreover, all operations in Cheetah is implemented entirely 
+on PyTorch, which means that all operations in Cheetah support automatic differentiation. Gradients of beam properties with respect to any element parameter including magnet position (misalignments) and strengths can be computed efficiently. 
+This ability of differentiation is important for our approach, when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the Cheetah simulation to update the trainable misalignment parameter. Cheetah provides 
+two beam representations. 
+
 \begin{itemize}
-    \item choose words, that are known;
-    \item use words that are probably unknown, such that their meaning can be deduced from the context, or explain or define them;
-    \item do not construct deeply nested sentences.
+    \item \textbf{Parameter Beam:} assumes a Gaussian beam and describes it using a seven dimensional mean vector and covariance matrix, enabling really fast simulation. 
+    \item \textbf{Particle Beam:} tracks individual macro-particles for higher fidelity results but then there is a tradeoff of higher computational cost. 
 \end{itemize}
 
 
-\subsection{Line of Reasoning}
-
-The line of reasoning depends on your topic and the type of text. To get a general structure, address the following six questions:
-
-\begin{enumerate}
-    \item What is the purpose of the text?
-    \item What is the content? What is to be included and why?
-    \item What is not (anymore) part of the content? What is to be excluded?
-    \item Which parts of the contents belong together? What is the structure of the topic?
-    \item What part of the contents is suited to conclude with?
-    \item What part of the contents is suited to start with?
-\end{enumerate}
-
-These questions show the possibilities for a line of reasoning. They show that---even for one type of text with one purpose---different lines of reasoning are possible. 
-To choose one, it is important to analyze the topic and the content.
+Since the ARES experimental area runs in the linear regime, where moment-based tracking is sufficiently accurate, this project work uses Parameter Beam.
 
 
-\subsection{References}
+\subsection{The ARES accelerator}
 
-One of the most important differences between scientific writing and writing other texts is citing the references used for your work. 
-Before starting to write your scientific text, you have probably been reading (or you still are) a lot of books, articles, conference proceedings, 
-manuals, etc. Some may turn out to be of no interest, but some may give you the fundamental ideas. 
+The Accelerator Research Experiment at SINBAD (ARES) facility at DESY serves as a testbed for advanced accelerator concepts and to test machine learning 
+techniques on them. It is a normal-conducting S-band linac which produces electron beams up to 155 MeV and is designed for flexibility and reproducibility 
+in research applications. \
 
-In any case, you have to cite those references you made use of and point out all parts of your work that are based on results of others 
-(those could even be your own results, if you have already published some work).
+The project work focuses on the ARES experimental area, as demonstrated in figure 2.2. The beamline consists of three quadrupole magnets (Q1, Q2, Q3) and 
+two corrector/steering magnets (CV for vertical steering and CH for horizontal steering), and a diagnostic screen where beam properties are measured. 
 
-The citation normally follows a sentence, separated by a comma. In general you don't use direct quotes in engineering sciences, but repeat the contents in your own words for better understandability
-and make clear from the proper positioning of the citation---and if necessary an additional clarifying sentence---that you are referring to other work.
+The beam tuning task involves optimizing these five magnets:  
+\begin{equation}
+    \mathbf{u} = (k_{Q1}, k_{Q2}, k_{Q3}, \theta_{CV}, \theta_{CH})
+\end{equation}
+where $\mathbf{u} \in \mathbb{R}^5$ is the control vector. \
 
-The bibliography follows at the end of your work, prior to the appendix. All your cited references are listed here. \LaTeX\ offers many ways to generate
-such a listing automatically, which will be explained in the next chapter.
+In order to produce a focused and centred beam at screen, The measured observables are beam’s 
+horizontal and vertical positions ($\mu_x$ and $\mu_y$) and sizes ($\sigma_x$ and $\sigma_y$). The objective 
+function used throughout this work is the mean absolute error which combines both centering and 
+focusing into a single metric to minimise
+\begin{equation}
+    MAE = \frac{1}{4}(|\mu_x| + \sigma_x + |\mu_y| + \sigma_y)
+\end{equation}
 
-\subsection{Structure}
+Partial observability one of the major challenge in this problem, the quadrupole magnets are never exactly aligned; 
+the precise beam distribution entering the experimental area is not known. Even with the corrector magnets set to zero, 
+a misaligned quadrupole with transverse offset ($\Delta_x$, $\Delta_y$) partially functions as steering element eventually 
+diverting the beam. These misalignments are not directly measurable during operation. \ 
 
-Start your scientific text with an introduction, that
-\begin{itemize}
-    \item introduces the subject,
-    \item specifies the topic,
-    \item reflects on the problem that you are going to consider,
-    \item defines the purpose of the work,
-    \item explains the line of reasoning
-    \item sketches the structure of the work.
-\end{itemize}
-
-Keep in mind that there are some readers that only read the introduction and conclusion of your work
-and base their decision on whether the work bears any interest for them only on these parts. To make that decision,
-they need to get all relevant information from those two chapters. Hint: Look at other work with a focus on that question.
-
-The main part of your work should be structured as well, however here there are no general rules. The order of your
-chapters depends, if your focus was either on theoretic, methodical or experimental work. Think about a weighting for each
-chapter. What is reflected in volume and does not necessarily need to be proportional to the amount of time, you have 
-spent to solve the respective problems. Sometimes it takes one week to debug a piece of code, which nevertheless should not be explained excessively.
-
-Your work concludes with a summary of your results. Therefore have a look at your introduction: how you have specified the problem there and does it
-match with your results. Do not present any further results here that have been not presented in the main part. As such, always clearly
-separate the presentation and the discussion of results.
-
-Finally, you end with an outlook that points out open questions. What should be further analyzed and what are possible followup projects?
-Do not be afraid to point out questions that came to your mind during your research, but you did not have time to properly answer. 
-A good thesis may raise more questions than it clarifies.
+This Simulation-to-Reality gap shows that even an accurate physics model will not perfectly predict beam behavior unless it 
+counts for the actual misalignments. By treating the six misalignments parameters (horizontal and vertical offsets for each quadrupole) 
+as trainable quantities within the physics-informed prior, our approach addresses this issue and allows the model to adjust to actual 
+accelerator settings using the optimization data. 

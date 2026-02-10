@@ -1,134 +1,100 @@
-\section{Writing with \LaTeX}\label{a:latex_en}
+\section{Introduction}\label{a:latex_en}
 
-\subsection{\LaTeX's Features}
+\subsection{Motivation}
 
-This section gives some useful hints to write a thesis with \LaTeX. It is important to know that \LaTeX\ is not a WYSIWYG (what you see is what you get) program like other text editors, such as Microsoft Word.
-Instead it much more resembles a programming language, in which you construct your text by proper usage of syntax. The ''source code'' is your \LaTeX file (\texttt{.tex}). 
+Particle accelerators are among the most advanced scientific apparatus ever developed 
+to perform ground breaking scientific experiments. The Deutsches Elektronen-Synchrotron 
+(DESY) \cite{DESYwebsite} located in Hamburg hosts multiple top notch accelerator facilities such as 
+European X-Ray Free Electron Laser (European XFEL) and the PETRA III synchrotron radiation 
+source. These facilities accelerate electrons to almost the speed of light, producing intense 
+beams of X-rays that enable researchers to study atomic level processes and structures with 
+great precision. A crucial challenge for particle accelerators is the tuning process, which 
+involves adjustment of many magnetic components to produce desired beam properties including 
+position, size and divergence. As a specialized test facility for accelerators research and 
+development, the ARES (Accelerator Research Experiment at SINBAD) linear accelerator at DESY 
+allows the evaluation of innovative tuning techniques prior to deployment on even larger facilities. \
 
-As in other programming languages it is possible to insert comments in \LaTeX\ that are not visible in the final text. 
-Line wraps are not of importance while writing the text, since they are created during compilation. Therefore, formatting 
-with \LaTeX is not a big deal and should not take a lot of time, if all the logical relations are correct.
+Beam tuning is essentially an optimization task. In order to find exact configurations that minimize the 
+deviation between the actual beam properties and the desired beam, we optimize the adjustable parameters 
+(like magnet strengths and corrector/steering angles). However, the optimization is not that simple and 
+perhaps contains a number of challenges: 
 
-One of the big advantages of \LaTeX\ is writing formulas. Using the logical referencing of your formulas, those references are 
-always correct, even if you change the position of the formulas. Furthermore the print quality you achieve with \LaTeX\ formulas 
-is hardly matched by any other program, let alone free of charge!
-Citing is very easy in \LaTeX, as well.
+\begin{enumerate}
+    \item \textbf{Expensive Evaluation:} It is impractical to conduct an extensive search since measurement of each beam property takes time and resources.
+    \item \textbf{Uncertainity:} There are a number of systematic errors and noises that might affect beam measurement.
+    \item \textbf{Black-box Nature:} The complex relationship between input parameters and beam characteristics cannot be directly observed analytically during operation.
+    \item \textbf{Unknown / Partial Observability:} Important parameters like characteristics of incoming beam and magnet misalignments are frequently either unknown or partially observed. 
 
+\end{enumerate}
 
-The following text is not very meaningful on its own, but if you read the source code at the same time, it is easy to understand how 
-different elements are constructed. You should try to compile the file yourself and compare the results. If there are any differences,
-check if your \LaTeX-configurations are correct.
+A traditional approach to accelerator tuning could be through skilled professionals who manually adjust 
+parameters using their knowledge and experience. While being efficient, this method significantly relies 
+on individual skill, takes a lot of time, is expensive and does not scale well to more complicated accelerator 
+systems. Therefore automated optimization methods are crucial for effective accelerator performance. \
 
+Several optimization algorithms have been applied to particle accelerator tuning problems with their own unique 
+advances and disadvantages. Nelder-Mead Simplex is gradient free optimization techniques and is one of the approaches 
+that is widely used because of its simplicity and robustness. However they do not create models that generalize across many 
+optimization runs and usually need many function evaluations to converge \cite{nelder1965simplex}. Another approach is the Reinforcement Learning (RL) 
+technique that has shown remarkable performance \cite{kaiser2024rl}. RL agents can learn to tune accelerators in very few steps during deployment 
+by training neural network regulations in simulation. However, RL requires extensive training data as well as very careful reward 
+function design. The trained policies could not generalize well to conditions outside of their training distribution. The approach 
+of our interest for this project work is Bayesian Optimization (BO), which finds a middle ground among these approaches. BO creates 
+a probabilistic surrogate model of the objective function, which is usually a Gaussian Process, that provides estimates of uncertainty 
+as well as predictions. This makes it possible for assessment points wisely balancing between both exploration and exploitation. BO is 
+a desirable option for accelerator tuning since it excels at solving expensive black-box optimization problems. \
 
-\subsection{Continuous Text}
-
-Writing continuous text is very easy. You can use an arbitrary text editor and just start writing, without paying any attention to 
-formatting, line breaks, etc. If you want to start a new paragraph, just leave one or more blank lines...
-
-So here we are now in a new paragraph. The font size is defined in the header of your main file. Emphasis is possible by different font styles. 
-Thus when you define a new term, this is normally accentuated in \textit{italic}, important statements in \textbf{bold} and programming code in
-\texttt{typewriter} or \verb"verbatim" style.
-
-\subsubsection{Structuring Your Work}
-
-On the lowest level you can use the command \texttt{subsubsection} to structure your work.
-
-\subsubsection*{Same Level, but Without Numbering}
-
-Have a look at the source code to see how that is achieved!
-
-\subsection{Special Objects}
-
-
-\subsubsection{Figures}
-\label{b:picturesubsection}
-
-\cref{f:picfirstfigure} shows a block diagram.
-
-\begin{figure}[ht]		% h - here, t - top, b - bottom, p - page, ! - try hard
-  \centering
-  \afig{1}{figures/example}			% {scaling}{Figure from MATLAB, picture, etc.}
-  \caption{First figure}
-  \label{f:picfirstfigure}
-\end{figure}
-
-You can include figures by using the command \verb'\afig{scale}{path/to/figure.ext}'. This works for extensions like \texttt{pdf}, \texttt{png}, \texttt{jpg}. To include tikz figures, use the command \verb'\tikzfig{scale}{path/to/figure}'.
-
-\subsubsection{Formulas}
-
-Formulas like
-\begin{eqnarray}
-\ddot{\phi}_1
-    &=&
-    \frac{M_1+l_1 \sin \phi_2
-    (m_2 l_{s2} + m_3 l_{s3})
-    (\dot{\phi}_2^2+2 \dot{\phi}_1\dot{\phi}_2 )
-    -f_1 \dot{\phi}_1}
-    {\theta_1+\theta_2+\theta_3+2l_1 (m_1 l_{s2}+m_3 l_{s3} \cos \phi_2)+
-    m_3 (l_1^2+l_2^2)+m_l l_1^2}  \,,  \label{e:eqnfirst} \\
-\ddot{\phi}_2
-    &=&
-    \frac{M_2 + l_1 \sin \phi_2 (m_2 l_{s2} + m_3 l_{s3})
-    \dot{\phi}_1^2 +2 - \phi_2 \dot{\phi}_2}
-    {\theta_1+\theta_2+\theta_3} \, \label{e:eqnsecond}
-\end{eqnarray}
-are typeset nicely. Keep in mind that formulas are and should be written as part of sentences and thus can and have to contain punctuation marks!
+Another key insight motivating this project work is that, since the physics of particle accelerators is already well understood now, 
+We can map the passage of charged particles via magnets using a reliable model and they travel through magnetic fields according to 
+well established physics knowledge and thus, all thanks to modern simulation library like Cheetah \cite{kaiser2024bridging} that we can now predict beam 
+behavior with high accuracy. The standard BO uses uninformed zero mean prior function in the Gaussian process model. This implies that 
+the algorithm must learn the whole function landscape from scratch and have to begin with no prior knowledge of the intended objective 
+function values. On the other hand, if the physics informed knowledge could be incorporated into the prior, this shall give advantage 
+and optimization could already start with meaningful predictions that could focus its limited evaluation budget on identifying the 
+differences between the model and the reality. The importance of physics informed prior for accelerator optimization has also been 
+shown in the recent work \cite{boltz2025priormeanmodule} where the neural network surrogate models trained on the simulation data can perform as effective prior 
+mean functions, significantly speeding up the convergence. However, training neural network surrogates requires very large datasets 
+from simulations and the models produced may not generalize well to new conditions. 
 
 
-\subsubsection{Symbols}
-
-Symbols like $\Omega$ can be included inline with the text. \textbf{Never} start a sentence with a symbol!
 
 
-\subsubsection{Citations}
+\subsection{Cheetah as Physics Informed Prior}
 
-To cite a reference use the command \verb'\cite{We14}' as done here: \cite{We14}. Here \texttt{We14} is the so called BiB\TeX-Key. Have a look into the file ``S:/Standards/BibTex/rts''
-to see what that means. References usually are simply attached at the end of a statement, separated by a comma,
-\cite{We14}. Be aware that \LaTeX\ in general provides the command \verb'\cite'.
+Cheetah has already been demonstrated as a physics informed prior for BO on a straightforward beam focusing simple FODO 
+(Focus-Drift-Defocus-Drift) lattice \cite{boltz2025priormeanmodule}. A FODO cell is a fundamental building block made up of alternating quadrupole magnets 
+for focusing and defocusing that are separated by drift spaces. \
 
-\subsubsection{Index of Contents}
+This optimizational problem was two dimensional and only involved strengths of two quadrupole magnets ($k^{Q1}$ and $k^{Q2}$) with 
+the objective of minimising beam size at target location, defined as $0.5(|\sigma_x|+|\sigma_y|)$. One trainable hyperparameter, 
+the drift length between the quadrupoles, which was restricted to the interval [0.2, 1.0] m, was included in the physics informed 
+prior mean function. The results showed that BO with Cheetah prior converged about 15 steps, indicating better sample efficiency 
+than Nelder Mead simplex and standard BO with zero prior. Furthermore, the method worked even with a mismatched prior, the algorithm 
+learned the correct values during GP model fitting and converged to the true optimum when the drift lengths in the prior model (0.5m)
+was different from the ground truth (0.7m). \
 
-The table of contents is generated automatically by \LaTeX. Therefore, each time you compile your main file, an \texttt{aux}-file (auxiliary) is generated that contains all 
-information for the table of contents. This file is embedded, when you compile a second time. This holds true for all references and any change you make with respect to these
-requires to compile twice. An intuitive and simplified explanation is that \LaTeX\ just ''reads'' your files from top to bottom, taking notes in the \texttt{aux}-file while doing so.
-When reading your files again, the notes tell \LaTeX\ that it came across some figure, table or equation before, just like you when studying a subject.
+While this validated the fundamental concept, the FODO problem is an oversimplified example which does not depict the complex nature 
+of actual accelerator tuning operations. The two dimensional search space is quite easy to explore and the model reality mismatch was 
+restricted to a single geometric parameter (drift length) instead of the various other sources of uncertainty found in actual accelerators. \
+
+This project extends the FODO proof of concept to a significantly more complex and realistic problem which is transverse beam tuning at the 
+ARES experimental area at DESY. The extension contain following key advancements: \
+
+\begin{enumerate}
+    \item \textbf{Higher Dimensionality:} In contrast to two dimensional FODO problem, ARES problem possess five dimensional search space including two steering/corrector magnet angles ($\theta_{CV}$ and $\theta_{CH}$) and quadrupole strength ($k^{Q1},k^{Q2}, k^{Q3}$). The volume of the search space is greatly increased by this 2.5x increase in dimensionality, which makes more difficult and raises the importance of informed prior. 
+    \item \textbf{Realistic Lattice:} the ARES experimental area ($ARESlatticeStage3v1_9.json$) is a real accelerator section loaded from an actual lattice description file unlike the synthetic FODO cell. 
+    \item \textbf{Objective Nature:} for Ares problem, the objective function combines four beam parameters into a single metric: $0.25 (|\mu_x|+|\sigma_x|+|\mu_y|+|\sigma_y|)$ including horizontal and vertical positions and sizes. This makes simultaneous optimization of beam centering(position) and focusing(size).
+    \item \textbf{Trainable Misalignment Parameters:} Under this project work, the use of quadrupole misalignments as the cause of model reality mismatch is an important step forward. The ARES prior includes 6 trainable misalignment parameters (horizontal and vertical for each quadrupoles Q1, Q2 and Q3) which are limited to physically plausible intervals of $\pm 0.5 mm$, in contrast to the FODO demonstration, where only a single drift length was learned.
+\end{enumerate}
 
 
-\subsubsection{References}\label{b:subsecrefer}
+\subsection{Contribution}
 
-It is possible to refer to figures, equations, etc. like this: Figure~\ref{f:picfirstfigure}, Equation~(\ref{e:eqnsecond}),
-Sections~\ref{b:picturesubsection}. See how easy that is. This is one of the main advantages of \LaTeX!
-Note that ''Equation~(\ref{e:eqnsecond})'', e.g., is capitalized. It is regarded as the figures own name. Would you
-write your own name in lower case?
+Thus the main contributions of this work are : \
 
-While we are at it, have a look at the figure's caption. It uses capitalization like any other sentence in this document.
-Why? Because it is \textbf{not} a title, but a description.
-
-\subsubsection{Tables}
-
-Writing tables is probably the most cumbersome writing stuff in \LaTeX\ can get---and that is saying quite something!
-Have a close look at Table~\ref{t:table}. It does not use vertical rules and different line weights in respective places.
-This is the way to design tables. If you feel the need to use vertical rules, your table is probably not very readable in
-the first place.
-
-\begin{table}
-	\caption{A beautiful table}
-	\label{t:table}
-	\begin{center}
-	\begin{tabular}{ccccc}
-	\toprule
-                          	&        & \multicolumn{3}{c}{Columns} \\
-    \cmidrule{3-5}
-                            & Items  & A     & B     & C           \\
-    \midrule
-	\multirow{3}{*}{Rows}   & 1      & A1    & B1    & C1          \\
-	                        & 2      & A2    & B2    & C2          \\
-	                        & 3      & A3    & B3    & C3          \\
-	\bottomrule
-	\end{tabular}
-	\end{center}
-\end{table}
-
-Inform yourself about some basic rules on typesetting tables:
-
-\href{http://tug.org/pracjourn/2007-1/mori/mori.pdf}{``\textit{Tables in \LaTeX\ 2${}_\varepsilon$: Packages and Methods}''}.
+\begin{enumerate}
+    \item Demonstrates that Cheetah informed prior approach is scalable from 2D synthetic lattice to 5D real world accelerator tuning problem. 
+    \item Implements physics informed prior mean function for the ARES lattice being compatible with the Xopt Bayesian optimisation framework
+    \item Extends prior with six trainable misalignment parameters, enabling the physics model to adapt to real accelerator conditions during optimization
+    \item Contains a comprehensive comparison between standard BO, Nealder-Mead and physic-informed BO (matched and mismatched prior) across multiple trials.
+\end{enumerate}
