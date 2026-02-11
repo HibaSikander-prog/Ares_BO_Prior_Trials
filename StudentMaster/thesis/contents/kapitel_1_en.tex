@@ -2,11 +2,10 @@
 
 \subsection{Motivation}
 
-Particle accelerators are among the most advanced scientific apparatus ever developed 
-to perform ground breaking scientific experiments. The Deutsches Elektronen-Synchrotron 
-(DESY) \cite{DESYwebsite} located in Hamburg hosts multiple top notch accelerator facilities such as 
-European X-Ray Free Electron Laser (European XFEL) and the PETRA III synchrotron radiation 
-source. These facilities accelerate electrons to almost the speed of light, producing intense 
+Particle accelerators are one of the most advanced scientific devices ever developed 
+to perform innovative scientific experiments. The Deutsches Elektronen-Synchrotron 
+(DESY) \cite{DESYwebsite} located in Hamburg region hosts multiple top notch accelerator facilities such as 
+European XFEL X-ray Laser and the PETRA III. These facilities accelerate electrons to almost the speed of light, producing intense 
 beams of X-rays that enable researchers to study atomic level processes and structures with 
 great precision. A crucial challenge for particle accelerators is the tuning process, which 
 involves adjustment of many magnetic components to produce desired beam properties including 
@@ -30,23 +29,22 @@ perhaps contains a number of challenges:
 A traditional approach to accelerator tuning could be through skilled professionals who manually adjust 
 parameters using their knowledge and experience. While being efficient, this method significantly relies 
 on individual skill, takes a lot of time, is expensive and does not scale well to more complicated accelerator 
-systems. Therefore automated optimization methods are crucial for effective accelerator performance. \
-
+systems. Therefore, automated optimization methods are necessary for effective accelerator performance.
 Several optimization algorithms have been applied to particle accelerator tuning problems with their own unique 
-advances and disadvantages. Nelder-Mead Simplex is gradient free optimization techniques and is one of the approaches 
-that is widely used because of its simplicity and robustness. However they do not create models that generalize across many 
-optimization runs and usually need many function evaluations to converge \cite{nelder1965simplex}. Another approach is the Reinforcement Learning (RL) 
+advantages and disadvantages. Nelder-Mead Simplex is a gradient free optimization technique and one of the approaches 
+that is widely used because of its simplicity and robustness \cite{nelder1965simplex}. However they do not create models that generalize across many 
+optimization runs and usually need many function evaluations to converge. Another approach is the Reinforcement Learning (RL) 
 technique that has shown remarkable performance \cite{kaiser2024rl}. RL agents can learn to tune accelerators in very few steps during deployment 
 by training neural network regulations in simulation. However, RL requires extensive training data as well as very careful reward 
 function design. The trained policies could not generalize well to conditions outside of their training distribution. The approach 
 of our interest for this project work is Bayesian Optimization (BO), which finds a middle ground among these approaches. BO creates 
 a probabilistic surrogate model of the objective function, which is usually a Gaussian Process, that provides estimates of uncertainty 
-as well as predictions. This makes it possible for assessment points wisely balancing between both exploration and exploitation. BO is 
+as well as predictions. This makes it possible for the assessment points to wisely balance between both exploration and exploitation. BO is 
 a desirable option for accelerator tuning since it excels at solving expensive black-box optimization problems. \
 
 Another key insight motivating this project work is that, since the physics of particle accelerators is already well understood now, 
-We can map the passage of charged particles via magnets using a reliable model and they travel through magnetic fields according to 
-well established physics knowledge and thus, all thanks to modern simulation library like Cheetah \cite{kaiser2024bridging} that we can now predict beam 
+We can map the passage of charged particles via magnets using a reliable model and then they travel through magnetic fields according to 
+well established physics knowledge. Thus, all thanks to modern simulation library like Cheetah \cite{kaiser2024bridging} that we can now predict beam 
 behavior with high accuracy. The standard BO uses uninformed zero mean prior function in the Gaussian process model. This implies that 
 the algorithm must learn the whole function landscape from scratch and have to begin with no prior knowledge of the intended objective 
 function values. On the other hand, if the physics informed knowledge could be incorporated into the prior, this shall give advantage 
@@ -54,12 +52,12 @@ and optimization could already start with meaningful predictions that could focu
 differences between the model and the reality. The importance of physics informed prior for accelerator optimization has also been 
 shown in the recent work \cite{boltz2025priormeanmodule} where the neural network surrogate models trained on the simulation data can perform as effective prior 
 mean functions, significantly speeding up the convergence. However, training neural network surrogates requires very large datasets 
-from simulations and the models produced may not generalize well to new conditions. 
+from simulations. So let's continue studying Bayesian Optimization with Cheetah informed prior.
 
 
 
 
-\subsection{Cheetah as Physics Informed Prior}
+\subsection{Extension from Simple FODO to Complex ARES Problem}
 
 Cheetah has already been demonstrated as a physics informed prior for BO on a straightforward beam focusing simple FODO 
 (Focus-Drift-Defocus-Drift) lattice \cite{boltz2025priormeanmodule}. A FODO cell is a fundamental building block made up of alternating quadrupole magnets 

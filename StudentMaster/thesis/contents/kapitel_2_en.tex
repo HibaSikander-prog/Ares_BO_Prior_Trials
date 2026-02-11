@@ -9,10 +9,11 @@ ARES accelerator where the work is used and how physics informed knowledge may b
 
 Gaussian process (GP) offers a robust framework for regression which allows uncertainty quantification along with predictions. GPs are well suited for 
 modeling unknown objectives in optimization problems \cite{roussel2024bo} because they define probability distributions directly over functions, unlike parametric models 
-that learn a predefined set of weights. A Gaussian process is fully specified by its mean function $m(x)$ and covariance function (kernel) $k(x,x’)$ that encodes 
+
++that learn a predefined set of weights. A Gaussian process is fully specified by its mean function $m(x)$ and covariance function (kernel) $k(x,x')$ that encodes 
 assumptions about the function’s smoothness:
 \begin{equation}
-f(x) \sim \mathcal{GP}(m(x), k(x,x’))
+f(x) \sim \mathcal{GP}(m(x), k(x,x'))
 \end{equation}
 
 The kernel carries assumptions regarding smoothness and correlation between points, the mean function encodes previous expectations regarding the behavior of the function. 
@@ -35,7 +36,8 @@ method \cite{jalas2021bolaserplasma} \cite{Duris2020bofreeelectron}. The goal is
 Here, $x$ represents the control variables (like magnet settings), $\mathcal{X}$ is the search space and $f(x)$ is the quantity to be minimised (beam error in our case). BO aims to find $x^*$ using as 
 few function evaluation as possible. The key idea is to use a probabilistic surrogate model (usually a GP) to guide the search rather than evaluating the expensive function everywhere. \
 
-As shown in Figure~\ref{fig:bayesian_optimization_loop}, the optimization process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition 
+% As shown in Figure~\ref{fig:bayesian_optimization_loop}, the optimization process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition 
+% NOTE: The reference fig:bayesian_optimization_loop is missing or not defined. Uncomment and fix the label if the figure is present in the main document.
 function. Exploration (sampling when uncertainty is large) and exploitation (sampling where the predicted value is good) are balanced by the acquisition function. After evaluating the true objective at the 
 selected point, we update the dataset and repeat until the evaluation budget is exhausted.
 
@@ -181,3 +183,102 @@ This Simulation-to-Reality gap shows that even an accurate physics model will no
 counts for the actual misalignments. By treating the six misalignments parameters (horizontal and vertical offsets for each quadrupole) 
 as trainable quantities within the physics-informed prior, our approach addresses this issue and allows the model to adjust to actual 
 accelerator settings using the optimization data. 
+
+
+
+
+
+% \usepackage{tikz}
+% \usetikzlibrary{shapes, arrows, positioning, shadows}
+
+
+\begin{figure}[ht]
+\centering
+\begin{tikzpicture}[
+    node distance=2.5cm,
+    magnet/.style={
+        rectangle,
+        draw=blue!50,
+        fill=blue!10,
+        thick,
+        minimum width=1.2cm,
+        minimum height=0.8cm,
+        text centered
+    },
+    screen/.style={
+        rectangle,
+        draw=green!50,
+        fill=green!10,
+        thick,
+        minimum width=2cm,
+        minimum height=1.5cm,
+        text centered,
+        rounded corners=4pt
+    },
+    beam/.style={
+        -latex,
+        thick,
+        red!70!black,
+        line width=1.5pt
+    },
+    label/.style={
+        font=\small\bfseries
+    },
+    param/.style={
+        font=\scriptsize,
+        color=blue!70!black
+    },
+    elemname/.style={
+        font=\tiny,
+        color=black!70
+    }
+]
+
+% Beam line
+\draw[beam] (0,0) -- (10,0);
+\node at (0,-0.3) [label] {beam};
+
+% Quadrupole Q1
+\node[magnet] (Q1) at (1.5,0) {Q1};
+\node[above=0.2cm of Q1, param] {$k_1$};
+\node[below=0.4cm of Q1, elemname] {AREAMQZM1};
+
+% Quadrupole Q2
+\node[magnet] (Q2) at (3.5,0) {Q2};
+\node[above=0.2cm of Q2, param] {$k_1$};
+\node[below=0.4cm of Q2, elemname] {AREAMQZM2};
+
+% Corrector CV
+\node[magnet] (CV) at (5.5,0) {CV};
+\node[above=0.2cm of CV, param] {$\theta_v$};
+\node[below=0.4cm of CV, elemname] {AREAMCVM1};
+
+% Quadrupole Q3
+\node[magnet] (Q3) at (7.5,0) {Q3};
+\node[above=0.2cm of Q3, param] {$k_1$};
+\node[below=0.4cm of Q3, elemname] {AREAMQZM3};
+
+% Corrector CH
+\node[magnet] (CH) at (9.5,0) {CH};
+\node[above=0.2cm of CH, param] {$\theta_h$};
+\node[below=0.4cm of CH, elemname] {AREAMCHM1};
+
+% Screen
+\node[screen] (SCREEN) at (12,0) {SCREEN};
+\node[below=0.4cm of SCREEN, elemname] {AREABSCR1};
+
+% Arrows between elements
+\draw[thick, black!50, ->] (Q1) -- (Q2);
+\draw[thick, black!50, ->] (Q2) -- (CV);
+\draw[thick, black!50, ->] (CV) -- (Q3);
+\draw[thick, black!50, ->] (Q3) -- (CH);
+\draw[thick, black!50, ->] (CH) -- (SCREEN);
+
+\end{tikzpicture}
+\caption{Schematic of the ARES experimental area lattice showing the magnet sequence. The beam travels from left to right through quadrupoles (Q1, Q2, Q3) and correctors (CV, CH) before reaching the screen. The adjustable parameters are the quadrupole strengths $k_1$ and corrector angles $\theta_v$, $\theta_h$.}
+\label{fig:ares_lattice}
+\end{figure}
+
+
+
+
