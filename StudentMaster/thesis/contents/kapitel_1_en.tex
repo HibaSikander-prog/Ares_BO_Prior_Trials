@@ -59,15 +59,23 @@ from simulations. So let's continue studying Bayesian Optimization with Cheetah 
 
 \subsection{Extension from Simple FODO to Complex ARES Problem}
 
-Cheetah has already been demonstrated as a physics informed prior for BO on a straightforward beam focusing simple FODO 
+Cheetah has already been demonstrated as a physics informed prior for BO on a very simple and straightforward beam focusing FODO 
 (Focus-Drift-Defocus-Drift) lattice \cite{boltz2025priormeanmodule}. A FODO cell is a fundamental building block made up of alternating quadrupole magnets 
 for focusing and defocusing that are separated by drift spaces. \
 
-This optimizational problem was two dimensional and only involved strengths of two quadrupole magnets ($k^{Q1}$ and $k^{Q2}$) with 
-the objective of minimising beam size at target location, defined as $0.5(|\sigma_x|+|\sigma_y|)$. One trainable hyperparameter, 
-the drift length between the quadrupoles, which was restricted to the interval [0.2, 1.0] m, was included in the physics informed 
+Since this optimization problem was two dimensional, thus it only involved strengths of two quadrupole magnets ($k^{Q1}$ and $k^{Q2}$) with 
+the objective of minimising beam size at target location, defined in equation \ref{mae_fodo}. Here $\sigma_x$ and $\sigma_y$ are the horizontal 
+and vertical beam sizes, considering only beam size (focusing) without beam position (centering), unlike ARES objective in equation \ref{mae_ares}, 
+refelecting the simpler nature of FODO demonstration.
+\begin{equation}
+\label{mae_fodo}
+mae = 0.5(|\sigma_x|+|\sigma_y|)
+\end{equation}
+
+Moreover, although there were two drift spaces ($d_1$ and $d_2$), they were constrained to have same lengths between the quadrupoles, 
+therefore only a single trainable hyperparameter was there, which was restricted to the interval [0.2, 1.0] m and was included in the physics informed 
 prior mean function. The results showed that BO with Cheetah prior converged about 15 steps, indicating better sample efficiency 
-than Nelder Mead simplex and standard BO with zero prior. Furthermore, the method worked even with a mismatched prior, the algorithm 
+than Nelder Mead Simplex and standard BO with zero prior. Furthermore, the method worked even with a mismatched prior, the algorithm 
 learned the correct values during GP model fitting and converged to the true optimum when the drift lengths in the prior model (0.5m)
 was different from the ground truth (0.7m). \
 
@@ -76,13 +84,13 @@ of actual accelerator tuning operations. The two dimensional search space is qui
 restricted to a single geometric parameter (drift length) instead of the various other sources of uncertainty found in actual accelerators. \
 
 This project extends the FODO proof of concept to a significantly more complex and realistic problem which is transverse beam tuning at the 
-ARES experimental area at DESY. The extension contain following key advancements: \
+ARES Experimental Area at DESY. The extension contain following key advancements: \
 
 \begin{enumerate}
-    \item \textbf{Higher Dimensionality:} In contrast to two dimensional FODO problem, ARES problem possess five dimensional search space including two steering/corrector magnet angles ($\theta_{CV}$ and $\theta_{CH}$) and quadrupole strength ($k^{Q1},k^{Q2}, k^{Q3}$). The volume of the search space is greatly increased by this 2.5x increase in dimensionality, which makes more difficult and raises the importance of informed prior. 
-    \item \textbf{Realistic Lattice:} the ARES experimental area ($ARESlatticeStage3v1_9.json$) is a real accelerator section loaded from an actual lattice description file unlike the synthetic FODO cell. 
-    \item \textbf{Objective Nature:} for Ares problem, the objective function combines four beam parameters into a single metric: $0.25 (|\mu_x|+|\sigma_x|+|\mu_y|+|\sigma_y|)$ including horizontal and vertical positions and sizes. This makes simultaneous optimization of beam centering(position) and focusing(size).
-    \item \textbf{Trainable Misalignment Parameters:} Under this project work, the use of quadrupole misalignments as the cause of model reality mismatch is an important step forward. The ARES prior includes 6 trainable misalignment parameters (horizontal and vertical for each quadrupoles Q1, Q2 and Q3) which are limited to physically plausible intervals of $\pm 0.5 mm$, in contrast to the FODO demonstration, where only a single drift length was learned.
+    \item \textbf{Higher Dimensionality:} In contrast to two dimensional FODO problem, ARES problem possess five dimensional search space including two steering/corrector magnet angles ($\theta_{CV}$ and $\theta_{CH}$) and three quadrupole strengths ($k^{Q1},k^{Q2}, k^{Q3}$). The volume of the search space is greatly increased by around 2.5x in dimensionality, which makes it more difficult and raises the importance of informed prior. 
+    \item \textbf{Realistic Lattice:} The ARES Experimental Area ($ARESlatticeStage3v1\_9.json$) is a real accelerator section loaded from an actual lattice description file unlike the synthetic FODO cell. 
+    \item \textbf{Objective Nature:} For Ares problem, the objective function combines four beam parameters into a single metric: $0.25 (|\mu_x|+|\sigma_x|+|\mu_y|+|\sigma_y|)$ including horizontal and vertical positions and sizes. This makes simultaneous optimization of beam centering(position) and focusing(size).
+    \item \textbf{Trainable Quadrupole's Misalignments:} Under this project work, the use of quadrupole misalignments as the cause of model reality mismatch is an important step forward. The ARES prior includes 6 trainable misalignment hyperparameters (horizontal and vertical for each quadrupoles Q1, Q2 and Q3) which are limited to physically plausible intervals of $\pm 0.5 mm$, in contrast to the FODO demonstration, where only a single hyperparameter (drift length) was learned.
 \end{enumerate}
 
 
@@ -91,8 +99,8 @@ ARES experimental area at DESY. The extension contain following key advancements
 Thus the main contributions of this work are : \
 
 \begin{enumerate}
-    \item Demonstrates that Cheetah informed prior approach is scalable from 2D synthetic lattice to 5D real world accelerator tuning problem. 
-    \item Implements physics informed prior mean function for the ARES lattice being compatible with the Xopt Bayesian optimisation framework
-    \item Extends prior with six trainable misalignment parameters, enabling the physics model to adapt to real accelerator conditions during optimization
-    \item Contains a comprehensive comparison between standard BO, Nealder-Mead and physic-informed BO (matched and mismatched prior) across multiple trials.
+    \item Demonstrating that Cheetah informed prior approach is scalable from 2D synthetic lattice to 5D real world accelerator tuning problem. 
+    \item Implementing physics informed prior mean function for the ARES lattice being compatible with the Xopt Bayesian optimisation framework
+    \item Extending prior with six trainable misalignment parameters, enabling the physics model to adapt to real accelerator conditions during optimization
+    \item Containing a comprehensive comparison between standard BO, Nealder-Mead and physic-informed BO (matched and mismatched prior) across multiple trials.
 \end{enumerate}

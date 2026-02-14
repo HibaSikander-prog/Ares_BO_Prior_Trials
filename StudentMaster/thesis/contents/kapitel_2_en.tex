@@ -1,6 +1,6 @@
 \section{Theory}	\label{a:stil_en}
 
-In this chapter, the theoretical foundations of this work are developed. We begin with Gaussian processes as probabilistic function approximators, 
+In this chapter, the theoretical foundations of this project work are developed. We begin with Gaussian processes as probabilistic function approximators, 
 present Bayesian optimization as a framework for sample efficient black-box optimization and then eventually look over the Cheetah simulator and the 
 ARES accelerator where the work is used and how physics informed knowledge may be integrated through the prior mean function.
 
@@ -9,24 +9,31 @@ ARES accelerator where the work is used and how physics informed knowledge may b
 
 Gaussian process (GP) offers a robust framework for regression which allows uncertainty quantification along with predictions. GPs are well suited for 
 modeling unknown objectives in optimization problems \cite{roussel2024bo} because they define probability distributions directly over functions, unlike parametric models 
-
-+that learn a predefined set of weights. A Gaussian process is fully specified by its mean function $m(x)$ and covariance function (kernel) $k(x,x')$ that encodes 
-assumptions about the function’s smoothness:
+that learn a predefined set of weights. A Gaussian process is fully specified by its mean function $m(x)$ and covariance function (kernel) $k(x,x')$.
 \begin{equation}
+\label{gp_formula}
 f(x) \sim \mathcal{GP}(m(x), k(x,x'))
 \end{equation}
 
-The kernel carries assumptions regarding smoothness and correlation between points, the mean function encodes previous expectations regarding the behavior of the function. 
+Here equation \ref{gp_formula} states that a function $f(x)$ is drawn from GP where the mean function $m(x)$ encodes previous expectations regarding the behavior of the 
+function and the kernel $k(x,x')$ carries assumptions regarding smoothness and correlation between points. 
 The kernel selection determines what kind of functions the GP considers probable. Because of its ability in modeling smooth, physically realistic functions without assuming 
-infinite differentiability,  Mat\'ern-5/2 kernel is widely used in Bayesian Optimization \cite{roussel2024bo}. The GP uses Bayes’s rule (formula for baye’s rule) to update 
+infinite differentiability,  Mat\'ern-5/2 kernel is widely used in Bayesian Optimization \cite{roussel2024bo}. The GP uses Bayes’s rule (equation \ref{eq_bayes_rule}) to update 
 from prior to posterior when we observe data. The posterior mean remains Gaussian, with mean and variance that reflects both our prior assumption and observed evidence. 
 One of the important characteristics is that posterior uncertainty is low in areas with dense observations and high in areas with sparse data, this natural uncertainty 
 quantification is what makes GPs useful for guiding optimization.
 
+\begin{equation}
+\label{eq_bayes_rule}
+p(f | X, y) \propto p(y | f, X)p(f | X)
+\end{equation}
+
+Where $p(f | X, y)$ is the posterior (Updated GP), $p(f | X)$ is prior (GP) and $p(y | f, X)$ is the likelihood of observed data.
+
 \subsection{Bayesian Optimization}
 Bayesian Optimization (BO) is a sequential method for determining the optimal value of expensive black-box functions \cite{roussel2024bo}. It is especially effective when gradient information 
 is not available and each function evaluation is expensive. Because of these characteristics, BO is ideally suited for accelerator tuning, where it has emerged as a cutting-edge 
-method \cite{jalas2021bolaserplasma} \cite{Duris2020bofreeelectron}. The goal is to solve:
+method \cite{jalas2021bolaserplasma} \cite{Duris2020bofreeelectron}. The goal is to solve, shown in equation \ref{eq_optFormulation}:
 
 \begin{equation}
     \label{eq_optFormulation}
@@ -34,11 +41,9 @@ method \cite{jalas2021bolaserplasma} \cite{Duris2020bofreeelectron}. The goal is
 \end{equation}
 
 Here, $x$ represents the control variables (like magnet settings), $\mathcal{X}$ is the search space and $f(x)$ is the quantity to be minimised (beam error in our case). BO aims to find $x^*$ using as 
-few function evaluation as possible. The key idea is to use a probabilistic surrogate model (usually a GP) to guide the search rather than evaluating the expensive function everywhere. \
-
-% As shown in Figure~\ref{fig:bayesian_optimization_loop}, the optimization process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition 
-% NOTE: The reference fig:bayesian_optimization_loop is missing or not defined. Uncomment and fix the label if the figure is present in the main document.
-function. Exploration (sampling when uncertainty is large) and exploitation (sampling where the predicted value is good) are balanced by the acquisition function. After evaluating the true objective at the 
+few function evaluation as possible. The key idea is to use a probabilistic surrogate model (usually a GP) to guide the search rather than evaluating the expensive function everywhere. 
+As shown in Figure~\ref{fig:bayesian_optimization_loop}, the optimization process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition function.
+Exploration (sampling when uncertainty is large) and exploitation (sampling where the predicted value is good) are balanced by the acquisition function. After evaluating the true objective at the 
 selected point, we update the dataset and repeat until the evaluation budget is exhausted.
 
 \begin{figure}[ht]
@@ -95,40 +100,52 @@ selected point, we update the dataset and repeat until the evaluation budget is 
 \end{figure}
 
 
-In this project work, the predicted mean and uncertainty are directly combined using the Upper Confidence Bound (UCB) acquisition function:
+This project work, uses the Upper Confidence Bound (UCB) acquisition function (equation \ref{eq_UCB}) with $\beta$ = 2.0, 
+following the approach in BO with cheetah prior's first demo \cite{kaiser2024bridging} and common practice in accelator 
+optimization \cite{roussel2024bo}. 
 \begin{equation}
+    \label{eq_UCB}
     \alpha_{UCB}(x) = \mu(x) + \beta \sigma(x)
 \end{equation}
 
-where $\mu(x)$ and $\sigma(x)$ are the GP posterior mean and standard deviation respectively. The parameter $\beta$ controls the exploration-exploitation trade-off. 
-For minimization, this formulation prefers points that either have low predicted values (exploitation) or high uncertainty (exploration). We use $\beta$ = 2.0 throughout this project work, following the common practice \cite{roussel2024bo} .
+Where $\mu(x)$ and $\sigma(x)$ are the GP posterior mean and standard deviation respectively and parameter $\beta$ controls the exploration-exploitation trade-off. 
 
 \subsection{Physics Informed Prior Mean Function}
 
-Before any data is observed, our belief about the objective is represented by the prior mean function $\mu(x)$. The standard practice is to use zero or constant mean, which assumes no prior knowledge. 
-However, physics models that approximate the system are often used in scientific applications, incorporating this knowledge can significantly improve the performance \cite{boltz2025priormeanmodule} . \
-
+Before any data is observed, our belief about the objective is represented by the prior mean function $\mu(x)$. The standard practice is to use zero or constant mean, 
+which assumes no prior knowledge. Physics models that approximate the system are often used in scientific applications and we have seen that incorporating this knowledge can significantly improve the performance \cite{boltz2025priormeanmodule}. 
 To understand why, consider the GP posterior mean prediction at a new point. The GP learns to predict the difference between the prior mean and the actual function. These residuals are small and can be 
-learned from fewer observations when the prior mean is accurate. Whereas when the prior is simply zero, the GP has to learn the entire function from scratch. This motivates using a physics informed similar as the prior mean:
+learned from fewer observations when the prior mean is accurate. Whereas when the prior is simply zero, the GP has to learn the entire function from scratch. This motivates using a physics informed prior mean function (equation \ref{eq_physics_prior}):
 
 \begin{equation}
-    m(x) = f_{physics}(x; \theta)
+    \label{eq_physics_prior}
+    m(x) = f_{physics}(x; \phi)
 \end{equation}
 
-Where $\theta$ represents the model parameters like element alignments or beam characteristics. This benefits to improve sample efficiency, have meaningful predictions before observing data and physical consistency in extrapolation.\
-
-A key innovation in this work is making the physics model parameters $\theta$ trainable alongside the standard GP hyperparameters. In standard GP practice, the kernel hyperparameters $\omega$ (length scales, signal variance) and 
-noise variance are estimated by maximising the log marginal likelihood of observed data \cite{williams2006gaussian} . As theeta influences the prior mean predictions, it can be included in this optimisation. 
+Where $f_{physics}$ is the physics model prediction, $x$ being input to the optimization, which in our case are the five magnet settings required to be optimized ($k_{Q1}$, $k_{Q2}$, $\theta_{CV}$,$k_{Q3}$, $\theta_{CH}$) 
+and $\phi$ represents parameters of physics model that are uncertain or unknown like quadrupole misalignments, beam characteristics, drift lengths etc. In this project, it has been chosen to focus on quadrupole misalignments because they are a major source of model reality mismatch in ARES accelerator tuning.
+This benefits to improve sample efficiency and having meaningful predictions before observing data. 
+In standard GP practice, as shown in equation \ref{eq_bo_kernel_hyperparameters}, every time the GP model is fitted, it optimizes the kernel hyperparameters $\omega$ (length scales, signal variance,
+noise variance) by maximising the log marginal likelihood of observed data \cite{williams2006gaussian}. 
 
 
 \begin{equation}
-    \theta^* = \arg\max_\theta \log p(y | X, \theta, \omega)
+    \label{eq_bo_kernel_hyperparameters}
+    \omega^* = \arg\max_\omega \log p(y | X, \omega)
 \end{equation}
 
-For this optimization to work, the physics similar must be differentiable so that we can compute how changes in the model parameters $\theta$ affect the marginal likelihood. Cheetah satisfies this requirement through its PyTorch implementation. 
-As the optimization progresses and more data is collected, the GP fitting process automatically adjusts the physics model parameters to better match the observed beam behavior. This is the type of online system identification where the model 
-learns hidden system parameters as a byproduct of optimization itself, eliminating the need for calibration experiments. In this project, we use this approach to learn quadrupole misalignments  which are small transverse offsets that effect 
-the beam steering but cannot be directly measured during accelerator operation.
+A key innovation in this project work is making the physics model parameters $\phi$ (in our case quadrupole misalignments: $\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$) trainable alongside the standard GP hyperparameters, represented by equation \ref{eq_bo_physics_parameters}. 
+As more data is collected the learned $\phi$ gets closer to the true values so the physics model becomes more accurate eventually leading to better prediction and optimization performance. 
+
+
+\begin{equation}
+    \label{eq_bo_physics_parameters}
+    (\phi^*, \omega^*) = \arg\max_{\phi, \omega} \log p(y | X, \phi, \omega)
+\end{equation}
+
+Thus here, y are the observed objective values, X are input points evaluated so far and $\phi$ are the physics model parameters. By optimizing $\log p(y | X, \phi, \omega)$, it measures how well the model explains the observed data. 
+Note that $\omega$ is always optimized during standard GP fitting, while $\phi$ is only optimized when explicitely set as trainable. This approach allows the physics model to adapt better and gradually converge towards their true values, making the prior more accurate and speeding up the convergence by mitigating the mismatch between the model and reality.
+
 
 
 
