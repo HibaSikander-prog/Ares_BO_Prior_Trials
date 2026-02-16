@@ -65,7 +65,7 @@ for focusing and defocusing that are separated by drift spaces. \
 
 Since this optimization problem was two dimensional, thus it only involved strengths of two quadrupole magnets ($k^{Q1}$ and $k^{Q2}$) with 
 the objective of minimising beam size at target location, defined in equation \ref{mae_fodo}. Here $\sigma_x$ and $\sigma_y$ are the horizontal 
-and vertical beam sizes, considering only beam size (focusing) without beam position (centering), unlike ARES objective in equation \ref{mae_ares}, 
+and vertical beam sizes, considering only beam size (focusing) without beam position (centering), unlike ARES problem, 
 refelecting the simpler nature of FODO demonstration.
 \begin{equation}
 \label{mae_fodo}
@@ -89,7 +89,7 @@ ARES Experimental Area at DESY. The extension contain following key advancements
 \begin{enumerate}
     \item \textbf{Higher Dimensionality:} In contrast to two dimensional FODO problem, ARES problem possess five dimensional search space including two steering/corrector magnet angles ($\theta_{CV}$ and $\theta_{CH}$) and three quadrupole strengths ($k^{Q1},k^{Q2}, k^{Q3}$). The volume of the search space is greatly increased by around 2.5x in dimensionality, which makes it more difficult and raises the importance of informed prior. 
     \item \textbf{Realistic Lattice:} The ARES Experimental Area ($ARESlatticeStage3v1\_9.json$) is a real accelerator section loaded from an actual lattice description file unlike the synthetic FODO cell. 
-    \item \textbf{Objective Nature:} For Ares problem, the objective function combines four beam parameters into a single metric: $0.25 (|\mu_x|+|\sigma_x|+|\mu_y|+|\sigma_y|)$ including horizontal and vertical positions and sizes. This makes simultaneous optimization of beam centering(position) and focusing(size).
+    \item \textbf{Objective Nature:} For Ares problem, the objective function combines four beam parameters into a single metric, including horizontal and vertical sizes ($\sigma_x$, $\sigma_y$) as well as the positions ($\mu_x$, $\mu_y$). This makes simultaneous optimization of beam centering and focusing.
     \item \textbf{Trainable Quadrupole's Misalignments:} Under this project work, the use of quadrupole misalignments as the cause of model reality mismatch is an important step forward. The ARES prior includes 6 trainable misalignment hyperparameters (horizontal and vertical for each quadrupoles Q1, Q2 and Q3) which are limited to physically plausible intervals of $\pm 0.5 mm$, in contrast to the FODO demonstration, where only a single hyperparameter (drift length) was learned.
 \end{enumerate}
 

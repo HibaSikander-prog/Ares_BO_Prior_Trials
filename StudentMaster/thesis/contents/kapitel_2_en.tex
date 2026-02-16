@@ -151,62 +151,46 @@ Note that $\omega$ is always optimized during standard GP fitting, while $\phi$ 
 
 \subsection{Cheetah Based Differential Simulation Library}
 
-Using physics knowledge based simulator as a prior mean function requires two key properties: the simulator must be fast enough to call within each GP evaluation, and the simulator must be differentiable in order to facilitate gradient based 
-hyperparameter optimization. A beam dynamics code called Cheetah \cite{kaiser2024bridging} was created to satisfy these needs.  Cheetah uses transfer matrix concept to depict beam transport. For linear optics, each accelerator element transforms 
-the beam’s phase space coordinates through a 7x7 transfer matrix. The standard 6x6 transfer matrix Ro is embedded within this structure, with the additional dimension enabling representation of effects such as magnet misalignments. 
-When compared to conventional simulation codes, Cheetah achieves speedups of several orders of magnitude through optimized tensor computation and automatic transfer map reduction. Moreover, all operations in Cheetah is implemented entirely 
-on PyTorch, which means that all operations in Cheetah support automatic differentiation. Gradients of beam properties with respect to any element parameter including magnet position (misalignments) and strengths can be computed efficiently. 
-This ability of differentiation is important for our approach, when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the Cheetah simulation to update the trainable misalignment parameter. Cheetah provides 
+Using physics knowledge based simulator as a prior mean function requires both speed (so the simulator must be fast enough to call within each GP evaluation) and differentiability (in order to facilitate gradient based 
+hyperparameter optimization). Cheetah \cite{kaiser2024bridging}, was developed to satisfy these needs, its main objective was to give machine learning applications a differentiable beam dynamics code with improved speed over existing simulation codes.
+This ability of differentiation in Cheetah is important for our approach because when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the Cheetah simulation to update the trainable misalignment parameter. Moreover, cheetah makes a conscious trade-off, in order to achieve speed, it gives up some fidelity. 
+
+Gradients of beam dynamics are often expensive to compute analytically or numerically \cite{kaiser2024bridging} 
+but cheetah overcomes this by utilizing $PyTorch$ automatic differentiation. Aditionally, this enables BO packages like $BoTorch$ to optimize acquisition functions effectively.
+Cheetah elements, by default, compute linear beam dynamics through an application of the linear transfer map $R_{Cheetah}$$\in$$\mathbb{R}^{7 \times 7}$, which is already provided with $R_{0}$$\in$$\mathbb{R}^{6 \times 6}$  being the standard transfer matrix refrenced in \cite{Brown_1968hkv}. 
+\begin{equation}
+R_{\text{Cheetah}} = \begin{pmatrix}
+R_0 & \vdots \\
+0\cdots 0 & 1
+\end{pmatrix}
+\label{eq:cheetah}
+\end{equation}
+
+
+The additional dimension allows the representation of effects like quadrupole misalignments, which is directly relevant to this project work since we learn these trainable parameters $\phi$.
+Cheetah provides 
 two beam representations. 
 
 \begin{itemize}
-    \item \textbf{Parameter Beam:} assumes a Gaussian beam and describes it using a seven dimensional mean vector and covariance matrix, enabling really fast simulation. 
-    \item \textbf{Particle Beam:} tracks individual macro-particles for higher fidelity results but then there is a tradeoff of higher computational cost. 
+    \item \textbf{Parameter Beam:} assumes a Gaussian beam and represents it using a seven dimensional mean vector and covariance matrix, only these statistical moments are propagated through the lattice, enabling really fast simulation. 
+    \item \textbf{Particle Beam:} represents the beam as individual macro-particles, each decribed by seven dimenional vector. This allows modeling of non-Gaussian distribution and bunch substructures, but at greater computational cost. 
 \end{itemize}
 
 
-Since the ARES experimental area runs in the linear regime, where moment-based tracking is sufficiently accurate, this project work uses Parameter Beam.
+This project work uses parameter beam because the ARES experimental area runs in the linear regime, where the Gaussian assumptions hold and thus the speed advantage is crucial, since cheetah simulator is being called wihtin every GP evaluation. 
 
 
 \subsection{The ARES accelerator}
 
 The Accelerator Research Experiment at SINBAD (ARES) facility at DESY serves as a testbed for advanced accelerator concepts and to test machine learning 
-techniques on them. It is a normal-conducting S-band linac which produces electron beams up to 155 MeV and is designed for flexibility and reproducibility 
-in research applications. \
+techniques on them. It is an S-band radio frequency linac with two independently powered travelling wav accelerating strcutures and a photoinjector. These structures can operate at energies upto 154 MeV. 
+ARES's main goal is to create and investigate sub-femtosecond electron bunches at accelerated energy. For uses like radiation production by free leectron lasers, the capacity to produce such brief bunches is highly desirable. ARES is also used for medical applications and for the study and development of accelerator components \cite{kaiser2024rl}.    \
 
-The project work focuses on the ARES experimental area, as demonstrated in figure 2.2. The beamline consists of three quadrupole magnets (Q1, Q2, Q3) and 
-two corrector/steering magnets (CV for vertical steering and CH for horizontal steering), and a diagnostic screen where beam properties are measured. 
-
-The beam tuning task involves optimizing these five magnets:  
-\begin{equation}
-    \mathbf{u} = (k_{Q1}, k_{Q2}, k_{Q3}, \theta_{CV}, \theta_{CH})
-\end{equation}
-where $\mathbf{u} \in \mathbb{R}^5$ is the control vector. \
-
-In order to produce a focused and centred beam at screen, The measured observables are beam’s 
-horizontal and vertical positions ($\mu_x$ and $\mu_y$) and sizes ($\sigma_x$ and $\sigma_y$). The objective 
-function used throughout this work is the mean absolute error which combines both centering and 
-focusing into a single metric to minimise
-\begin{equation}
-    MAE = \frac{1}{4}(|\mu_x| + \sigma_x + |\mu_y| + \sigma_y)
-\end{equation}
-
-Partial observability one of the major challenge in this problem, the quadrupole magnets are never exactly aligned; 
-the precise beam distribution entering the experimental area is not known. Even with the corrector magnets set to zero, 
-a misaligned quadrupole with transverse offset ($\Delta_x$, $\Delta_y$) partially functions as steering element eventually 
-diverting the beam. These misalignments are not directly measurable during operation. \ 
-
-This Simulation-to-Reality gap shows that even an accurate physics model will not perfectly predict beam behavior unless it 
-counts for the actual misalignments. By treating the six misalignments parameters (horizontal and vertical offsets for each quadrupole) 
-as trainable quantities within the physics-informed prior, our approach addresses this issue and allows the model to adjust to actual 
-accelerator settings using the optimization data. 
+The project work focuses on the ARES experimental area. The beamline consists of three quadrupole magnets (Q1, Q2, Q3) and 
+two corrector/steering magnets (CV for vertical steering and CH for horizontal steering), and a diagnostic screen where beam properties are measured. The magnets sequence  of ARES Experimental Area, which is a subsection of ARES is depicted in figure \ref{fig:ares_lattice} where two quadrupole magnets (Q1 and Q2) are followed by the vertical corrector magnet (CV), then the third quadrupole magnet (Q3) 
+and finally the horizontal corrector magnet (CH) before reaching the screen. Each magnet is separated by a drift space ($d_1$, $d_2$, $d_3$, $d_4$, $d_5$, $d_6$) each having lengths within the range of 0.175 to 0.450 meters.
 
 
-
-
-
-% \usepackage{tikz}
-% \usetikzlibrary{shapes, arrows, positioning, shadows}
 
 
 \begin{figure}[ht]
@@ -284,6 +268,8 @@ accelerator settings using the optimization data.
 \node[screen] (SCREEN) at (12,0) {SCREEN};
 \node[below=0.4cm of SCREEN, elemname] {AREABSCR1};
 
+
+
 % Arrows between elements
 \draw[thick, black!50, ->] (Q1) -- (Q2);
 \draw[thick, black!50, ->] (Q2) -- (CV);
@@ -292,9 +278,35 @@ accelerator settings using the optimization data.
 \draw[thick, black!50, ->] (CH) -- (SCREEN);
 
 \end{tikzpicture}
-\caption{Schematic of the ARES experimental area lattice showing the magnet sequence. The beam travels from left to right through quadrupoles (Q1, Q2, Q3) and correctors (CV, CH) before reaching the screen. The adjustable parameters are the quadrupole strengths $k_1$ and corrector angles $\theta_v$, $\theta_h$.}
+\caption{Schematic of the ARES Experimental Area showing the magnet sequence.}
 \label{fig:ares_lattice}
 \end{figure}
+
+
+
+All magnets have polarity-switchable power supplies. It is possible to actuate the quadrupole magnets 
+upto a 72 m field strength. The steering/corrector magnets have a limit of 6.2 mrad. The camera's field of view is approximately 8 mm by 5 mm, with a pixel resolution of 2448 by 2040. The scintillating screen's effective resolution is about 20 $\mu$m. 
+The beam tuning task involves optimizing these five magnets:  
+\begin{equation}
+    \label{eq_magnets}
+    \mathbf{u} = (k_{Q1}, k_{Q2}, \theta_{CV}, k_{Q3}, \theta_{CH})
+\end{equation}
+
+Where in equation \ref{eq_magnets},  $\mathbf{u} \in \mathbb{R}^5$. In order to produce a focused and centred beam at screen, The measured observables are beam’s 
+horizontal and vertical positions ($\mu_x$ and $\mu_y$) and sizes ($\sigma_x$ and $\sigma_y$). The objective 
+function (equation \ref{eq_ares_ob}) used throughout this work is the mean absolute error which combines both centering and 
+focusing of the beam into a single metric to minimise.
+\begin{equation}
+    \label{eq_ares_ob}
+    MAE = \frac{1}{4}(|\mu_x| + |\sigma_x| + |\mu_y| + |\sigma_y|)
+\end{equation}
+
+In a real world accelerator, the quadrupole magnets are never exactly aligned; 
+the precise beam distribution entering the experimental area is not known. Even with the corrector magnets set to zero, 
+a misaligned quadrupole with transverse offset ($\Delta_x$, $\Delta_y$) partially functions as steering element eventually 
+diverting the beam. These misalignments are not directly measurable during operation. By treating the six misalignments parameters ($\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$) 
+as trainable quantities within the physics-informed prior, our approach addresses this issue too for the prior mismatched scenario
+and allows the model to adjust to actual accelerator settings using the optimization data. 
 
 
 
