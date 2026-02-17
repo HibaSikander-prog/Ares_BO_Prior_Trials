@@ -99,16 +99,28 @@ selected point, we update the dataset and repeat until the evaluation budget is 
 \label{fig:bayesian_optimization_loop}
 \end{figure}
 
+Acquisition functions guide where to sample next by balancing two competing goals, where one is exploring uncertain regions while the other is exploiting areas that look promising. 
+Two widely used aquisitions funtions are Expected Improvement (EI) and Upper Confidence Bound (UCB).
+
+\begin{itemize}
+    \item  \textbf{Expected Improvement:} This acquisition function computes how much better do we expect a candidate point to be compared to our current best observation $f(x^*)$, the expectation is taken over the GP's predictive distribution. EI naturally trades off exploration and exploitation wihtout any tuning parameter. 
+            \begin{equation}
+                \alpha_{EI}(x) = \mathbb{E}[\max(0, f(x^*) - f(x))]
+            \end{equation}
+            Where $f(x^*)$ is the best (lowest) observed value so far. The expectation averages over what the GP thinks might happen at x and the max ignores cases where things get worse by ensuring that only improvements are counted. 
+    \item \textbf{Upper Confidence Bound:} This acquisition function takes more direct approach by simply combinig the prredicted model and uncertainity.
+            \begin{equation}
+                \label{eq_UCB}
+                \alpha_{UCB}(x) = -\mu(x) + \beta \sigma(x)
+            \end{equation}
+            Where $\mu(x)$ and $\sigma(x)$ are the GP poterior mean and standard deviation respectively, and parameter $\beta$ controls the exploration-exploitation tradeoff.  
+
+\end{itemize}
 
 This project work, uses the Upper Confidence Bound (UCB) acquisition function (equation \ref{eq_UCB}) with $\beta$ = 2.0, 
-following the approach in BO with cheetah prior's first demo \cite{kaiser2024bridging} and common practice in accelator 
+following the approach used in the first demo over simple FODO problem \cite{kaiser2024bridging} and common practice in accelator 
 optimization \cite{roussel2024bo}. 
-\begin{equation}
-    \label{eq_UCB}
-    \alpha_{UCB}(x) = \mu(x) + \beta \sigma(x)
-\end{equation}
 
-Where $\mu(x)$ and $\sigma(x)$ are the GP posterior mean and standard deviation respectively and parameter $\beta$ controls the exploration-exploitation trade-off. 
 
 \subsection{Physics Informed Prior Mean Function}
 
@@ -152,32 +164,19 @@ Note that $\omega$ is always optimized during standard GP fitting, while $\phi$ 
 \subsection{Cheetah Based Differential Simulation Library}
 
 Using physics knowledge based simulator as a prior mean function requires both speed (so the simulator must be fast enough to call within each GP evaluation) and differentiability (in order to facilitate gradient based 
-hyperparameter optimization). Cheetah \cite{kaiser2024bridging}, was developed to satisfy these needs, its main objective was to give machine learning applications a differentiable beam dynamics code with improved speed over existing simulation codes.
-This ability of differentiation in Cheetah is important for our approach because when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the Cheetah simulation to update the trainable misalignment parameter. Moreover, cheetah makes a conscious trade-off, in order to achieve speed, it gives up some fidelity. 
-
+hyperparameter optimization). Cheetah \cite{kaiser2024bridging}, was developed to satisfy these needs. Cheetah makes a conscious trade-off, in order to achieve speed, it gives up some fidelity. 
+Its main objective is to give machine learning applications a differentiable beam dynamics code with improved speed over existing simulation codes.
+This ability of differentiation in Cheetah is important for our approach because when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the cheetah simulation to update the trainable misalignment parameter. 
 Gradients of beam dynamics are often expensive to compute analytically or numerically \cite{kaiser2024bridging} 
-but cheetah overcomes this by utilizing $PyTorch$ automatic differentiation. Aditionally, this enables BO packages like $BoTorch$ to optimize acquisition functions effectively.
-Cheetah elements, by default, compute linear beam dynamics through an application of the linear transfer map $R_{Cheetah}$$\in$$\mathbb{R}^{7 \times 7}$, which is already provided with $R_{0}$$\in$$\mathbb{R}^{6 \times 6}$  being the standard transfer matrix refrenced in \cite{Brown_1968hkv}. 
-\begin{equation}
-R_{\text{Cheetah}} = \begin{pmatrix}
-R_0 & \vdots \\
-0\cdots 0 & 1
-\end{pmatrix}
-\label{eq:cheetah}
-\end{equation}
+but cheetah overcomes this by utilizing $PyTorch$ automatic differentiation. So, instead of manually deriving gradients or approximating them numerically, which would then require multiple function calls per parameter, $PyTorch$ tracks operations as they happen and can compute exact gradients autometically through backpropagation.
+Aditionally, this enables BO packages like $BoTorch$ to optimize acquisition functions effectively.
+Cheetah provides two beam representations. 
 
-
-The additional dimension allows the representation of effects like quadrupole misalignments, which is directly relevant to this project work since we learn these trainable parameters $\phi$.
-Cheetah provides 
-two beam representations. 
 
 \begin{itemize}
     \item \textbf{Parameter Beam:} assumes a Gaussian beam and represents it using a seven dimensional mean vector and covariance matrix, only these statistical moments are propagated through the lattice, enabling really fast simulation. 
     \item \textbf{Particle Beam:} represents the beam as individual macro-particles, each decribed by seven dimenional vector. This allows modeling of non-Gaussian distribution and bunch substructures, but at greater computational cost. 
 \end{itemize}
-
-
-This project work uses parameter beam because the ARES experimental area runs in the linear regime, where the Gaussian assumptions hold and thus the speed advantage is crucial, since cheetah simulator is being called wihtin every GP evaluation. 
 
 
 \subsection{The ARES accelerator}
@@ -285,7 +284,7 @@ and finally the horizontal corrector magnet (CH) before reaching the screen. Eac
 
 
 All magnets have polarity-switchable power supplies. It is possible to actuate the quadrupole magnets 
-upto a 72 m field strength. The steering/corrector magnets have a limit of 6.2 mrad. The camera's field of view is approximately 8 mm by 5 mm, with a pixel resolution of 2448 by 2040. The scintillating screen's effective resolution is about 20 $\mu$m. 
+upto a 72 m field strength. The steering/corrector magnets have a limit of 6.2 mrad. The camera's field of view is approximately 8 mm by 5 mm, with a pixel resolution of 2448 by 2040. The scintillating screen's effective resolution is about 20 $\mu$m \cite{kaiser2024rl}. 
 The beam tuning task involves optimizing these five magnets:  
 \begin{equation}
     \label{eq_magnets}
@@ -295,10 +294,10 @@ The beam tuning task involves optimizing these five magnets:
 Where in equation \ref{eq_magnets},  $\mathbf{u} \in \mathbb{R}^5$. In order to produce a focused and centred beam at screen, The measured observables are beam’s 
 horizontal and vertical positions ($\mu_x$ and $\mu_y$) and sizes ($\sigma_x$ and $\sigma_y$). The objective 
 function (equation \ref{eq_ares_ob}) used throughout this work is the mean absolute error which combines both centering and 
-focusing of the beam into a single metric to minimise.
+focusing of the beam into a single metric to minimise. Where $\sigma_x$ and $\sigma_y$ are strictly positive since they are beam size.
 \begin{equation}
     \label{eq_ares_ob}
-    MAE = \frac{1}{4}(|\mu_x| + |\sigma_x| + |\mu_y| + |\sigma_y|)
+    MAE = \frac{1}{4}(|\mu_x| + \sigma_x + |\mu_y| + \sigma_y)
 \end{equation}
 
 In a real world accelerator, the quadrupole magnets are never exactly aligned; 
