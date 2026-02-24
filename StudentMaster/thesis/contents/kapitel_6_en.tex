@@ -1,0 +1,22 @@
+\section{Conclusion and Outlook}
+
+The central question behind this project work was quite straightforward which was whether a differentiable physics simulator, 
+used as the prior mean in Bayesian Optimization, can actually help with a realistic accelerator tuning problem(ARES Experimental Area) 
+or does it only work on a toy example(FODO lattice)? Based on everything presented in Chapter 4, it can be confidently answered a “yes”. Under this project scope, the Cheetah based prior idea demonstrated on a simple two dimensional FODO lattice \cite{kaiser2024bridging} was taken and 
+scaled it up to the five dimensional beam tuning task at the ARES Experimental Area. The implementation involved building a GPyTorch compatible module 
+(\texttt{AresPriorMean}) that wraps the Cheetah simulator and uses six quadrupole misalignment values as trainable parameters. This module is integrated 
+with Xopt framework, making it easy to switch between different optimizer setups. \
+
+The results speak for themselves. Both the physics informed BO variants achieved a median MAE of 6$\mu$m, which is significantly higher than standard BO (46$\mu$m) and Nelder-Mead(67$\mu$m).
+The matched prior hit the 40$\mu$m target in a median 4 steps, the mismatched prior in 14, whereas standard BO required 82 steps on a rare occasions (20\% success rate) and 
+Nelder-Mead never reached the target. What makes the approach especially promising for real world use is its robustness. Even when starting with incorrect misalignments values 
+and modified beam distribution (the mismatched prior in BO case), the prior still outperformed the uninformed zero mean prior (standard BO) and caught up to the perfectly matched prior scenario 
+of BO very soon within 15 iterations. The trainable misalignment parameters successfully converged very close to the ground truth purely from optimization data, which means that the method does 
+not just tune the beam but it also learns something about the machine’s physical state along the way.  \
+
+Ofcourse, the ARES Experimental Ares with its five tuneable parameters is still a relatively small problem compared to large-scale facilities like European XFEL and PETRA III, 
+but this is a significant step forward from the two dimensional FODO lattice that was previously tested to evaluate cheetah’s potential. The fact that the method scales gracefully 
+to this level sends quite good signs for tackling more complex beamlines in future. 
+
+
+

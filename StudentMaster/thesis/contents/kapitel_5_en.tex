@@ -1,0 +1,14 @@
+\section{Future Work}
+
+As far as the future work is concerned, the most obvious next step now would be 
+to test the whole implementation on the real ARES accelerator rather than in simulation.  
+A real machine could bring things that a simulator cannot completely capture, 
+like measurement noise, small differences between cheetah model and actual machine etc. 
+Since Xopt already supports a real hardware interface, the only modifications would be 
+to replace the simulated evaluation function with a live one. Another interesting step 
+for the future work could be to convert the code into a Python package. 
+The system is currently tailored to the ARES, with hardwired magnets names, lattice file, 
+and misalignments. But the idea of picking a Cheetah lattice, tuning, learning and running BO 
+itself is not specific to any one beamline, so packaging it up with a cleaner interface would 
+make it much easier for others to try on their own accelerators without having to dig through 
+ARES specific scripts.

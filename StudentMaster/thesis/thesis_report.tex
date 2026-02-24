@@ -70,6 +70,13 @@
 	\ifthenelse{\equal{\isenglish}{true}}%
 	{\include{contents/theend}}		        % Conclusion
 	{\include{contents/schluss}} 	        % Zusammenfassung
+	%
+	\ifthenelse{\equal{\isenglish}{true}}%
+	{\include{contents/kapitel_5_en}}{}	        % Conclusion
+	%
+	\ifthenelse{\equal{\isenglish}{true}}%
+	{\include{contents/kapitel_6_en}}{}	        % Conclusion
+
 	
 	\printbibliography[title=\bibnamem]
 \end{refsection} 
