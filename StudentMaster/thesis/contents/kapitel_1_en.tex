@@ -9,7 +9,7 @@ European XFEL X-ray Laser and the PETRA III. These facilities accelerate charged
 great precision. A crucial challenge for particle accelerators is the tuning process, which 
 involves adjustment of many magnetic components to produce desired beam properties including 
 position, size and divergence. As a specialized test facility for accelerators research and 
-development, the ARES (Accelerator Research Experiment at SINBAD) linear accelerator at DESY 
+development, the ARES (Accelerator Research Experiment at SINBAD), which is a linear accelerator at DESY,
 allows the evaluation of innovative tuning techniques prior to deployment on even larger facilities. \
 
 Beam tuning is essentially an optimization task. In order to find exact configurations that minimize the 
@@ -76,8 +76,7 @@ therefore only a single trainable hyperparameter was there, which was restricted
 prior mean function. The results showed that BO with Cheetah prior converged about 15 steps, indicating better sample efficiency 
 than Nelder Mead Simplex and standard BO with zero prior. Furthermore, the method worked even with a mismatched prior, the algorithm 
 learned the correct values during GP model fitting and converged to the true optimum when the drift lengths in the prior model (0.5m)
-was different from the ground truth (0.7m). \
-
+was different from the ground truth (0.7m). 
 While this validated the fundamental concept, the FODO problem is an oversimplified example which does not depict the complex nature 
 of actual accelerator tuning operations. The two dimensional search space is quite easy to explore and the model reality mismatch was 
 restricted to a single geometric parameter (drift length) instead of the various other sources of uncertainty found in actual accelerators. \
@@ -86,7 +85,7 @@ This project extends the FODO proof of concept to a significantly more complex a
 ARES Experimental Area at DESY. The extension contain following key advancements: \
 
 \begin{enumerate}
-    \item \textbf{Higher Dimensionality:} In contrast to two dimensional FODO problem, ARES problem possess five dimensional search space including two steering/corrector magnet angles ($\theta_{CV}$ and $\theta_{CH}$) and three quadrupole strengths ($k^{Q1},k^{Q2}, k^{Q3}$). The volume of the search space is greatly increased by around 2.5x in dimensionality, which makes it more difficult and raises the importance of informed prior. 
+    \item \textbf{Higher Dimensionality:} In contrast to two dimensional FODO problem, ARES problem possess five dimensional search space including two steering/corrector magnet angles ($\theta^{CV}$ and $\theta^{CH}$) and three quadrupole strengths ($k^{Q1},k^{Q2}, k^{Q3}$). The volume of the search space is greatly increased by around 2.5x in dimensionality, which makes it more difficult and raises the importance of informed prior. 
     \item \textbf{Realistic Lattice:} The ARES Experimental Area is a real accelerator section loaded from an actual lattice description file unlike the synthetic FODO cell. 
     \item \textbf{Objective Nature:} For Ares problem, the objective function combines four beam parameters into a single metric, including horizontal and vertical sizes ($\sigma_x$, $\sigma_y$) as well as the positions ($\mu_x$, $\mu_y$). This makes simultaneous optimization of beam centering and focusing.
     \item \textbf{Trainable Quadrupole's Misalignments:} Under this project work, the use of quadrupole misalignments as the cause of model reality mismatch is an important step forward. The ARES prior includes 6 trainable misalignment hyperparameters (horizontal and vertical for each quadrupoles Q1, Q2 and Q3) which are limited to physically plausible intervals of $\pm 0.5 mm$, in contrast to the FODO demonstration, where only a single hyperparameter (drift length) was learned.
