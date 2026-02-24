@@ -219,7 +219,37 @@ Nelder-Mead, Standard BO (zero mean), BO with Cheetah prior (mismatched scenario
 All four approaches face the same simulated accelerator so that the comparison is fair,  what differs between them is only the optimization strategy, 
 and in case of prior informed methods, how much the prior knowledge is available from the start for each method. 
 
-   
+
+
+Three optimizers are compared Listing \ref{code:mismatched_setup} shows how the most complex one (BO with mismatched prior) is set up.
+the other two are the simpler subsets of the same pattern. 
+
+\begin{lstlisting}[caption={BO with cheetah prior(mismatched setup).}, label={code:mismatched_setup}]
+# Create the prior mean module with default
+prior_mean_module = bo_cheetah_prior.AresPriorMean(
+                    incoming_beam=incoming_beam
+                )
+                # Initialize misaligments to zero, will be learned
+                prior_mean_module.q1_misalign_x = 0.0
+                prior_mean_module.q1_misalign_y = 0.0
+                prior_mean_module.q2_misalign_x = 0.0
+                prior_mean_module.q2_misalign_y = 0.0
+                prior_mean_module.q3_misalign_x = 0.0
+                prior_mean_module.q3_misalign_y = 0.0 
+
+                #Inject into GP constructor with trainable_mean_keys
+                gp_constructor = StandardModelConstructor(
+                    mean_modules={"mae": prior_mean_module},
+                    trainable_mean_keys=["mae"], 
+                )    
+                
+                # Create UCB generator with beta 2.0
+                generator = UpperConfidenceBoundGenerator(
+                beta=2.0, vocs=vocs, gp_constructor=gp_constructor
+            )    
+\end{lstlisting}
+
+
 \begin{table} [htbp]
     \centering
     \small
