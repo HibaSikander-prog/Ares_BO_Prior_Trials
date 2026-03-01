@@ -12,7 +12,7 @@ tuning problem including Nelder-Mead, standard BO, BO\_prior (mismatched), and B
     
 \end{figure}
 
-The plot’s most interesting insight is how fast the two physics informed variants of BO are from the other optimizers. 
+The convergence curves plot in Figure \ref{fig:convergence_curve} highlights the significantly faster convergence of the two physics-informed BO variants compared to the standard BO and Nelder-Mead baselines.
 The matched prior (green dotted line) drops sharply within the first five iterations, and flattens out by iteration 10 already. 
 The mismatched prior (blue dashed line) is only slightly behind the matched case which makes sense because the GP needs some observations 
 before the optimizer can start correcting the misalignment parameters, thus this case takes roughly 20 iterations to reach a comparable 
@@ -22,39 +22,62 @@ indicates more uncertainty in BO standard case, reflecting the fact that without
 the initial random exploration phase can either go well or poorly, depending on where the points happen to land. Nelder-Mead (solid black line), in the early phase 
 (around iterations 10-20), it actually decreases more quickly than standard BO, which is the 
 characteristics of the simplex method to make large directed steps once it finds a downhill direction. However, it plateaus around  80 $\mu$m and then never 
-goes lower than that. This shows that in a five dimensional space with a complex landscape, the simplex might get stuck in local minima or lose its shape and 
-thus, without a probabilistic model to guide exploration, it has no mechanism to escape.
+goes lower than that. This shows that NM struggles in this five-dimensional space.
 
 
 %\section{Summary Performance Metrics}
 %\label{sec:metrics}
 
 %Table~\ref{tab:results_main} collects the key performance metrics across all four methods. These numbers correspond to the evaluation protocol described in Section~3.5 and are directly comparable to the results reported in~\cite{kaiser2024rl}.
-
-\begin{landscape}
-\centering
-\vspace*{\fill}
-\begin{table}[H]
+\clearpage
+\begin{sidewaystable}
 \centering
 \caption{Final Performance Metrics (100 iterations, 10 trials, target threshold for steps to target and success rate = \SI{40}{\micro\metre}).}
 \label{tab:results_main}
 \small
 \renewcommand{\arraystretch}{1.3}
-\begin{tabular}{l cc cc cc cc c}
+
+% Part (a): Error metrics
+\vspace{0.5em}
+\begin{tabular}{l cc cc cc}
 \toprule
- & \multicolumn{2}{c}{\textbf{Final error} ($\boldsymbol{\mu}$\textbf{m})} & \multicolumn{2}{c}{\textbf{RMSE} ($\boldsymbol{\mu}$\textbf{m})} & \multicolumn{2}{c}{\textbf{Improvement} (\%)} & \multicolumn{2}{c}{\textbf{Steps to target}} & \\
-\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9}
-\textbf{Optimiser} & Median & Mean & Median & Mean & Median & Mean & Median & Mean & \textbf{Success rate} \\
+ & \multicolumn{2}{c}{\textbf{Best MAE} ($\mu$m)}
+ & \multicolumn{2}{c}{\textbf{Final MAE} ($\mu$m)}
+ & \multicolumn{2}{c}{\textbf{RMSE} ($\mu$m)} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Optimizer} & Median & Mean & Median & Mean & Median & Mean \\
 \midrule
-Nelder-Mead           & 67.13  & $67.13 \pm 0$     & 149.42 & $149.42 \pm 0$    & 83.74  & $83.74 \pm 1.42e^{-14}$   & ---  & ---            & 0\%   \\
-BO (zero mean)        & 45.88  & $46.21 \pm 14.69$    & 179.20 & $181.34 \pm 18.14$   & 88.89  & $88.81 \pm 3.56$   & 82.5   & $82.5 \pm 5.5$     & 20\%  \\
-BO + prior (mismatch) & 6.49   & $6.52 \pm 1.59$      & 70.89  & $73.49 \pm 8.36$     & 98.43  & $98.42 \pm 0.38$   & 14   & $12.9 \pm 4.59$     & 100\% \\
-BO + prior (matched)  & 6.22   & $5.99 \pm 1.09$      & 59.83  & $60.02 \pm 1.19$     & 98.49  & $98.55 \pm 0.26$   & 4    & $3.6 \pm 1.28$      & 100\% \\
+Nelder-Mead           & 67.13 & $67.13 \pm 0$       & 67.84  & $67.84 \pm 0$        & 229.20 & $229.20 \pm 0$       \\
+BO (zero mean)        & 45.88 & $46.21 \pm 14.70$   & 147.96 & $153.29 \pm 66.66$   & 844.64 & $822.19 \pm 118.14$ \\
+BO + prior (mismatch) & 6.71  & $6.49 \pm 1.11$     & 40.54  & $41.71 \pm 16.99$    & 219.90 & $240.16 \pm 65.58$  \\
+BO + prior (matched)  & 5.75  & $5.89 \pm 1.06$     & 42.60  & $42.09 \pm 16.90$    & 177.57 & $173.11 \pm 19.34$  \\
 \bottomrule
 \end{tabular}
-\end{table}
-\vspace*{\fill}
-\end{landscape}
+
+\vspace{1.5em}
+
+% Part (b): Improvement and efficiency metrics
+\begin{tabular}{l cc cc cc c}
+\toprule
+ & \multicolumn{2}{c}{\textbf{Improv.\ Best} (\%)}
+ & \multicolumn{2}{c}{\textbf{Improv.\ Final} (\%)}
+ & \multicolumn{2}{c}{\textbf{Steps to target}}
+ & \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7}
+\textbf{Optimizer} & Median & Mean & Median & Mean & Median & Mean & \textbf{Success rate} \\
+\midrule
+Nelder-Mead           & 83.74 & $83.74 \pm 0$    & 83.57 & $83.57 \pm 0$      & ---  & ---              & 0\%   \\
+BO (zero mean)        & 88.89 & $88.81 \pm 3.56$ & 64.16 & $62.87 \pm 16.15$  & 82.5 & $82.5 \pm 5.5$   & 20\%  \\
+BO + prior (mismatch) & 98.37 & $98.43 \pm 0.27$ & 90.18 & $89.90 \pm 4.12$   & 10.5 & $10.8 \pm 4.87$  & 100\% \\
+BO + prior (matched)  & 98.61 & $98.57 \pm 0.26$ & 89.68 & $89.81 \pm 4.09$   & 4    & $3.6 \pm 1.28$   & 100\% \\
+\bottomrule
+\end{tabular}
+
+\end{sidewaystable}
+\clearpage
+
+
+
 
 As we can see from the final computed table, the final error (mae) for both physics informed BO variants (matched and mismatched) achieve a median of 6.22$\mu$m and 6.49$\mu$m respectively, 
 which is better than Nelder-Mead(67.13$\mu$m) and standard BO(45.88$\mu$m). In practical terms, 6.22$\mu$m and 6.49$\mu$m are well below the 40$\mu$m threshold, so the optimizer has effectively pushed the beam to the best state that could be measured by an 
@@ -125,7 +148,7 @@ roughly the same point where the mismatched prior catches up with the matched pr
 
 \subsection{Discussion}
 All the results and findings portray a consistent picture that Cheetah-based physics prior delivers a significant improvement 
-across every metric, not just in how good the final solution is, but also in how quickly and reliably the optimiser gets there. 
+across every metric, not just in how good the final solution is, but also in how quickly and reliably the optimizer gets there. 
 There are several points worth discussing:
 \begin{enumerate}
     \item The GP is given a warm start by the prior mean function, meaning that its predictions already approximate the shape of the true objective. This means that acquisition functions can make intelligent decisions from very first iterations, rather than going through several steps of  random exploration. The covergence curve plot makes this especially clear that physics informed methods are already below 100$\mu$m by 5 iteration, but standard BO takes upto iteration 60 or later.
@@ -134,4 +157,5 @@ There are several points worth discussing:
     \item The fact that Nelder-Mead converges to the same point in every trial (zero standard deviation on the final error) indicates a local minimum instead of a global one. In a 5 dimensional space with multiple local minima, this is not unexpected from a simplex based method. Thus, this local minimum (67.13$\mu$m) is not considered acceptable in practice as it exceeds the 40$\mu$m threshold.
     \item Compared to the original FODO demonstration \cite{kaiser2024bridging}, which was a two dimensional problem with a single learnable parameter, this project work used a 5 dimensional landscape with 6 learnable parameters. Still the methods with physics informed prior converged well in approximately 14 steps (mismatched) or 4 steps (matched). This shows that the approach scales reasonably well with the problem dimensionality in this scenario. 
 \end{enumerate}
+
 

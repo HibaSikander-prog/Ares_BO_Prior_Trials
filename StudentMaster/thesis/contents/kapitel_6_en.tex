@@ -1,22 +1,35 @@
-\section{Conclusion and Outlook}
+\section{Future Work}
 
-The central question behind this project work was quite straightforward which was whether a differentiable physics simulator, 
-used as the prior mean in Bayesian Optimization, can actually help with a realistic accelerator tuning problem(ARES Experimental Area) 
-or does it only work on a toy example(FODO lattice)? Based on everything presented in Chapter 4, it can be confidently answered a “yes”. Under this project scope, the Cheetah based prior idea demonstrated on a simple two dimensional FODO lattice \cite{kaiser2024bridging} was taken and 
-scaled it up to the five dimensional beam tuning task at the ARES Experimental Area. The implementation involved building a GPyTorch compatible module 
-(\texttt{AresPriorMean}) that wraps the Cheetah simulator and uses six quadrupole misalignment values as trainable parameters. This module is integrated 
-with Xopt framework, making it easy to switch between different optimizer setups. \
+This project work has the potential to be extended in several directions ranging from
+immediate next steps to longer term research questions. The most obvious next step now would be 
+to test the whole implementation on the real ARES accelerator rather than in simulation.  
+A real machine could bring things that a simulator cannot completely capture, 
+like measurement noise, small differences between cheetah model and actual machine etc. 
+Since Xopt already supports a real hardware interface, the only modifications would be 
+to replace the simulated evaluation function with a live one. Another interesting step 
+for the future work could be to convert the code into a Python package. 
+The system is currently tailored to the ARES, with hardwired magnets names, lattice file, 
+and misalignments. But the idea of picking a cheetah lattice, tuning, learning and running BO 
+itself is not specific to any one beamline, so packaging it up with a cleaner interface would 
+make it much easier for others to try on their own accelerators without having to dig through 
+ARES specific scripts. \
 
-The results speak for themselves. Both the physics informed BO variants achieved a median MAE of 6$\mu$m, which is significantly higher than standard BO (46$\mu$m) and Nelder-Mead(67$\mu$m).
-The matched prior hit the 40$\mu$m target in a median 4 steps, the mismatched prior in 14, whereas standard BO required 82 steps on a rare occasions (20\% success rate) and 
-Nelder-Mead never reached the target. What makes the approach especially promising for real world use is its robustness. Even when starting with incorrect misalignments values 
-and modified beam distribution (the mismatched prior in BO case), the prior still outperformed the uninformed zero mean prior (standard BO) and caught up to the perfectly matched prior scenario 
-of BO very soon within 15 iterations. The trainable misalignment parameters successfully converged very close to the ground truth purely from optimization data, which means that the method does 
-not just tune the beam but it also learns something about the machine’s physical state along the way.  \
-
-Ofcourse, the ARES Experimental Ares with its five tuneable parameters is still a relatively small problem compared to large-scale facilities like European XFEL and PETRA III, 
-but this is a significant step forward from the two dimensional FODO lattice that was previously tested to evaluate cheetah’s potential. The fact that the method scales gracefully 
-to this level sends quite good signs for tackling more complex beamlines in future. 
+Currently, each time the optimzer runs, it starts fresh, but in real accelerators the machine does not change drastically between the tuning
+sessions, The learned misalignment values and GP hyperparameters could be used as warm start for the next,
+potentially speeding up the convergence even further. So it would be worth having a look into it more. 
+Some other research direction that could push this project work further for future work could be 
+tuneable parameters increments. The ARES problem only has 5 tuneable parameters that were the 5 magnets, 
+but a real beamline can have dozens of them At such scale the GP gets expensive and it gets 
+harder for acquisition function to search, so combining the cheetah prior with dimensionality 
+reduction techniques would be worth exploring. 
 
 
+The current project uses objective function that combines beam position and size into a single MAE metric.
+In some operational scenarios, it might be more natural to treat these as separate objectives 
+(centering the beam and focusing the beam) and use mutli-objective BO instead of combining everything to a single MAE,
+so this could be another direction to experiment. Furthermore, on the modeling side, only the quadrupole misalignments were learned in this project, 
+but there could also be other sources mismatched/unknown in the real machine, like incoming 
+beam distribution may not be perfectly known, thus experiments can be conducted 
+to learn other unknown parameters as well. Finally, the tests could also be conducted on more advanced beamlines with more 
+complex objectives like the ones used in European XFEL and PETRA III. 
 
