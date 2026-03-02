@@ -1,24 +1,24 @@
 \section{Theory}	\label{a:stil_en}
 
-In this chapter, the theoretical foundations of this project work are developed. We begin with Gaussian processes as probabilistic function approximators, 
-present Bayesian optimization as a framework for sample efficient black-box optimization and then look over the Cheetah simulator and the 
-ARES accelerator where the work is used and how physics knowledge may be integrated through the prior mean function.
+In this chapter, the theoretical foundations of this project work are developed. We begin with Gaussian process as a probabilistic function approximator, 
+present Bayesian optimisation as a framework for sample efficient black-box optimisation and then look over the Cheetah simulator and 
+ARES accelerator, showing how physics knowledge may be integrated through the prior mean function.
 
 
 \subsection{Gaussian Process}
 
 Gaussian process (GP) offers a robust framework for regression which allows uncertainty quantification along with predictions. GPs are well suited for 
-modeling unknown objectives in optimization problems~\cite{roussel2024bo} because they define probability distributions directly over functions, unlike parametric models 
+modeling unknown objectives in optimisation problems~\cite{roussel2024bo}, because they define probability distribution directly over functions, unlike parametric models 
 that learn a predefined set of weights. A Gaussian process is fully specified by its mean function $m(x)$ and covariance function (kernel) $k(x,x')$, thus can be written as
 \begin{equation}
 \label{gp_formula}
 f(x) \sim \mathcal{GP}(m(x), k(x,x')),
 \end{equation}
 
-which states that a function $f(x)$ is drawn from GP where the mean function $m(x)$ encodes previous expectations regarding the behavior of the 
+which states that a function $f(x)$ is drawn from GP, where the mean function $m(x)$ encodes previous expectations regarding the behavior of the 
 function and the kernel $k(x,x')$ carries assumptions regarding smoothness and correlation between points. 
-The kernel selection determines what kind of functions the GP considers probable. Because of its ability in modeling smooth, physically realistic functions without assuming 
-infinite differentiability,  Mat\'ern-5/2 kernel is widely used in Bayesian Optimization~\cite{roussel2024bo}. The GP uses the Bayes’s rule,
+The kernel selection determines what kind of functions the GP considers probable. Because of its ability in modeling smooth and physically realistic functions without assuming 
+infinite differentiability,  Mat\'ern-5/2 kernel is widely used in Bayesian Optimisation~\cite{roussel2024bo}. The GP uses the Bayes’s rule,
 
 \begin{equation}
 \label{eq_bayes_rule}
@@ -27,10 +27,10 @@ p(f | X, y) \propto p(y | f, X)p(f | X),
 
 to update from prior to posterior when we observe data. $p(f | X, y)$ is the posterior (updated GP), $p(f | X)$ is prior (GP) and $p(y | f, X)$ is the likelihood of observed data. The posterior mean remains Gaussian, with mean and variance that reflects both our prior assumption and observed evidence. 
 One of the important characteristics is that posterior uncertainty is low in areas with dense observations and high in areas with sparse data, this natural uncertainty 
-quantification is what makes GPs useful for guiding optimization.
+quantification is what makes GPs useful for guiding optimisation.
 
-\subsection{Bayesian Optimization}
-Bayesian Optimization (BO) is a sequential method for determining the optimal value of expensive black-box functions~\cite{roussel2024bo}. It still works well when the gradient information 
+\subsection{Bayesian Optimisation}
+Bayesian Optimisation (BO) is a sequential method for determining the optimal value of expensive black-box functions~\cite{roussel2024bo}. BO still works well when the gradient information 
 is not available and each function evaluation is expensive. Because of these characteristics, BO is ideally suited for accelerator tuning, where it has emerged as a state-of-the-art 
 method~\cite{jalas2021bolaserplasma,Duris2020bofreelectron}. The goal is to solve,
 
@@ -41,7 +41,7 @@ method~\cite{jalas2021bolaserplasma,Duris2020bofreelectron}. The goal is to solv
 
 $x$ represents the control variables (like magnet settings), $\mathcal{X}$ is the search space and $f(x)$ is the quantity to be minimised (beam error in our case). BO aims to find $x^*$ using as 
 few function evaluation as possible. The key idea is to use a probabilistic surrogate model (usually a GP) to guide the search rather than evaluating the expensive function everywhere. 
-As shown in Figure~\ref{fig:bayesian_optimization_loop}, the optimization process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition function.
+As shown in Figure~\ref{fig:bayesian_optimisation_loop}, the optimisation process is iterative, We start with a modest initial set of observations, fit a GP model to the data and then choose the next point to evaluate using an acquisition function.
 Exploration (sampling when uncertainty is large) and exploitation (sampling where the predicted value is good) are balanced by the acquisition function. After evaluating the true objective at the 
 selected point, we update the dataset and repeat until the evaluation budget is exhausted.
 
@@ -52,7 +52,7 @@ selected point, we update the dataset and repeat until the evaluation budget is 
     block/.style={
         rectangle, 
         draw=black!60, 
-        fill=black!5, 
+        fill=blue!5, 
         thick,
         minimum width=6cm, 
         minimum height=1.2cm, 
@@ -77,7 +77,7 @@ selected point, we update the dataset and repeat until the evaluation budget is 
 
 \node[block] (init) {\parbox{5.5cm}{\centering\textbf{Initialisation} \\ (Random samples)}};
 \node[block, below=of init] (gp) {\parbox{5.5cm}{\centering\textbf{Fit GP Model} \\ $f \sim GP(m, k)$}};
-\node[block, below=of gp] (acq) {\parbox{5.5cm}{\centering\textbf{Optimize Acquisition} \\ $x_{t+1} = \arg\max \alpha$}};
+\node[block, below=of gp] (acq) {\parbox{5.5cm}{\centering\textbf{Optimise Acquisition} \\ $x_{t+1} = \arg\max \alpha$}};
 \node[block, below=of acq] (eval) {\parbox{5.5cm}{\centering\textbf{Evaluate Objective} \\ $y_{t+1} = f(x_{t+1})$}};
 \node[block, below=of eval] (update) {\parbox{5.5cm}{\centering\textbf{Update Dataset} \\ $D_{t+1} = D_t \cup \{\text{new}\}$}};
 
@@ -94,12 +94,12 @@ selected point, we update the dataset and repeat until the evaluation budget is 
     |- node[repeat, pos=0.2, left] {Repeat} ([xshift=-0.3cm]gp.west);
 
 \end{tikzpicture}
-\caption{The Bayesian optimization loop.}
-\label{fig:bayesian_optimization_loop}
+\caption{Bayesian optimisation loop.}
+\label{fig:bayesian_optimisation_loop}
 \end{figure}
 
 Acquisition functions guide where to sample next by balancing two competing goals, where one is exploring uncertain regions while the other is exploiting areas that look promising. 
-Two widely used aquisitions funtions are Expected Improvement (EI) and Upper Confidence Bound (UCB).
+Two widely used aquisition funtions are Expected Improvement (EI) and Upper Confidence Bound (UCB).
 
 \begin{itemize}
     \item  \textbf{Expected Improvement:} This acquisition function computes how much better do we expect a candidate point to be compared to our current best observation $f(x^*)$, the expectation is taken over the GP's predictive distribution. EI can be mathematically defined as
@@ -107,7 +107,7 @@ Two widely used aquisitions funtions are Expected Improvement (EI) and Upper Con
                 \alpha_{EI}(x) = \mathbb{E}[\max(0, f(x^*) - f(x))],
             \end{equation}
             where $f(x^*)$ is the best (lowest) observed value so far. The expectation averages over what the GP thinks might happen at x and the max ignores cases where things get worse by ensuring that only improvements are counted. EI naturally trades off exploration and exploitation wihtout any tuning parameter. 
-    \item \textbf{Upper Confidence Bound:} This acquisition function takes more direct approach by simply combinig the prredicted model and uncertainity.  UCB can be mathematically defined as
+    \item \textbf{Upper Confidence Bound:} This acquisition function takes more direct approach by simply combinig the predicted model and uncertainty.  UCB can be mathematically defined as
             \begin{equation}
                 \label{eq_UCB}
                 \alpha_{UCB}(x) = -\mu(x) + \beta \sigma(x),
@@ -118,7 +118,7 @@ Two widely used aquisitions funtions are Expected Improvement (EI) and Upper Con
 
 This project work, uses the Upper Confidence Bound (UCB) acquisition function (Equation \ref{eq_UCB}) with $\beta$ = 2.0, 
 following the approach used in the first demonstration over simple FODO problem~\cite{kaiser2024bridging} and common practice in accelator 
-optimization~\cite{roussel2024bo}. 
+optimisation~\cite{roussel2024bo}. 
 
 
 \subsection{From Uninformed to Physics-Informed Prior}
@@ -126,15 +126,15 @@ optimization~\cite{roussel2024bo}.
 Before any data is observed, our belief about the objective is represented by the prior mean function $\mu(x)$. The standard practice is to use zero or constant mean, 
 which assumes no prior knowledge. Physics models that approximate the system are often used in scientific applications and we have seen that incorporating this knowledge can significantly improve the performance~\cite{boltz2025priormeanmodule}. 
 To understand why, consider the GP posterior mean prediction at a new point. The GP learns to predict the difference between the prior mean and the actual function. These residuals are small and can be 
-learned from fewer observations when the prior mean is accurate. Whereas when the prior is simply zero, the GP has to learn the entire function from scratch. This motivates using a physics-informed prior mean function, defined as
+learned from fewer observations when the prior mean is accurate. Whereas, when the prior is simply zero, the GP has to learn the entire function from scratch. This motivates using a physics-informed prior mean function, defined as
 
 \begin{equation}
     \label{eq_physics_prior}
     m(x) = f_{physics}(x; \phi),
 \end{equation}
 
-with $f_{physics}$ being the physics model prediction, $x$ being input to the optimization, which in our case are the five magnet settings required to be optimized ($k_{Q1}$, $k_{Q2}$, $\theta_{CV}$,$k_{Q3}$, $\theta_{CH}$) 
-and $\phi$ represents parameters of physics model that are uncertain or unknown-like quadrupole misalignments, beam characteristics, drift lengths etc. In this project, it has been chosen to focus on quadrupole misalignments because they are a major source of model reality mismatch in ARES accelerator tuning.
+with $f_{physics}$ being the physics model prediction, $x$ being input to the optimisation, which in our case are the five magnet settings required to be optimised ($k^{Q1}$, $k^{Q2}$, $\theta^{CV}$,$k^{Q3}$, $\theta^{CH}$) 
+and $\phi$ represents parameters of physics model that are uncertain or unknown like, quadrupole misalignments, beam characteristics, drift lengths etc. In this project, it has been chosen to focus on quadrupole misalignments because they are a major source of model reality mismatch in ARES accelerator tuning.
 This benefits to improve sample efficiency and having meaningful predictions before observing data. 
 In standard GP practice, which is
 
@@ -144,8 +144,8 @@ In standard GP practice, which is
     \omega^* = \arg\max_\omega \log p(y | X, \omega),
 \end{equation}
 
-every time the GP model is fitted, it optimizes the kernel hyperparameters $\omega$ (length scales, signal variance,
-noise variance) by maximising the log marginal likelihood of observed data~\cite{williams2006gaussian}. A key innovation in this project work is making the physics model parameters $\phi$ (in our case quadrupole misalignments: $\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$) trainable alongside the standard GP hyperparameters, represented as 
+every time the GP model is fitted, it optimises the kernel hyperparameters $\omega$ (length scales, signal variance,
+noise variance) by maximising the log marginal likelihood of observed data~\cite{williams2006gaussian}. A key innovation in this project work is making the physics model parameters $\phi$ (in our case quadrupole misalignments: $\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$) trainable alongside the standard GP hyperparameters, and can be represented as 
 
 
 \begin{equation}
@@ -153,9 +153,9 @@ noise variance) by maximising the log marginal likelihood of observed data~\cite
     (\phi^*, \omega^*) = \arg\max_{\phi, \omega} \log p(y | X, \phi, \omega),
 \end{equation}
 
-with y being the observed objective values, X being input points evaluated so far and $\phi$ being the physics model parameters. As more data is collected the learned $\phi$ gets closer to the true values so the physics model becomes more accurate eventually leading to better prediction and optimization performance. 
-By optimizing $\log p(y | X, \phi, \omega)$, it measures how well the model explains the observed data. 
-Note that $\omega$ is always optimized during standard GP fitting, while $\phi$ is only optimized when explicitely set as trainable. This approach allows the physics model to adapt better and gradually converge towards their true values, making the prior more accurate and speeding up the convergence by mitigating the mismatch between the model and reality.
+with y being the observed objective values, X being input points evaluated so far and $\phi$ being the physics model parameters. As more data is collected the learned $\phi$ gets closer to the true values so the physics model becomes more accurate eventually leading to better prediction and optimisation performance. 
+By optimising $\log p(y | X, \phi, \omega)$, it measures how well the model explains the observed data. 
+Note that $\omega$ is always optimised during standard GP fitting, while $\phi$ is only optimised when explicitely set as trainable. This approach allows the physics model to adapt better and gradually converge towards their true values, making the prior more accurate and speeding up the convergence by mitigating the mismatch between the model and reality.
 
 
 
@@ -163,16 +163,16 @@ Note that $\omega$ is always optimized during standard GP fitting, while $\phi$ 
 \subsection{Cheetah-Based Differential Simulation Library}
 
 Using physics simulator as a prior mean function requires both speed (so the simulator must be fast enough to call within each GP evaluation) and differentiability (in order to facilitate gradient-based 
-hyperparameter optimization). Cheetah~\cite{kaiser2024bridging}, was developed to satisfy these needs. Cheetah makes a conscious trade-off, in order to achieve speed, it gives up some fidelity. 
+hyperparameter optimisation). Cheetah~\cite{kaiser2024bridging}, was developed to satisfy these needs. Cheetah makes a conscious trade-off, in order to achieve speed, it gives up some fidelity. 
 Its main objective is to give machine learning applications a differentiable beam dynamics code with improved speed over existing simulation codes.
-This ability of differentiation in Cheetah is important for our approach because when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the cheetah simulation to update the trainable misalignment parameter. 
+This ability of differentiation in Cheetah is important for our approach because when GP fits its hyperparameter by maximising marginal likelihood, gradients flow through the Cheetah simulation to update the trainable misalignment parameter. 
 Gradients of beam dynamics are often expensive to compute analytically or numerically~\cite{kaiser2024bridging} 
-but Cheetah overcomes this by utilizing $PyTorch$ automatic differentiation, which computes them numerically (to machine precision), while also being much faster.
-Additionally, Cheetah enables BO packages like $BoTorch$ to optimize acquisition functions effectively. It provides two beam representations. 
+but Cheetah overcomes this by utilizing PyTorch automatic differentiation, which computes them numerically (to machine precision), while also being much faster.
+Additionally, Cheetah enables BO packages like BoTorch to optimise acquisition functions effectively. There are two beam representations provided by Cheetah. 
 
 
 \begin{itemize}
-    \item \textbf{Parameter Beam:} assumes a Gaussian beam and represents it using a seven dimensional mean vector and covariance matrix, only these statistical moments are propagated through the lattice, enabling really fast simulation. 
+    \item \textbf{Parameter Beam:} assumes a Gaussian beam and represents it using a seven-dimensional mean vector and covariance matrix, only these statistical moments are propagated through the lattice, enabling really fast simulation. 
     \item \textbf{Particle Beam:} represents the beam as individual macro-particles, each described by seven-dimenional vector. This allows modeling of non-Gaussian distribution and bunch substructures, but at greater computational cost. 
 \end{itemize}
 
@@ -180,12 +180,12 @@ Additionally, Cheetah enables BO packages like $BoTorch$ to optimize acquisition
 \subsection{The ARES Accelerator}
 
 The Accelerator Research Experiment at SINBAD (ARES) facility at DESY serves as a testbed for advanced accelerator concepts and to test machine learning 
-techniques on them. It is an S-band radio frequency linac with two independently powered travelling wav accelerating strcutures and a photoinjector. These structures can operate at energies upto 154 MeV. 
-ARES's main goal is to create and investigate sub-femtosecond electron bunches at accelerated energy. For uses like radiation production by free leectron lasers, the capacity to produce such brief bunches is highly desirable. ARES is also used for medical applications and for the study and development of accelerator components~\cite{kaiser2024rl}.    \
+techniques on them. It is an S-band radio frequency linac with two independently powered travelling wave accelerating strcutures and a photoinjector. These structures can operate at energies upto \SI{154}{MeV}. 
+ARES's main goal is to create and investigate sub-femtosecond electron bunches at accelerated energy. For uses like radiation production by free electron lasers, the capacity to produce such brief bunches is highly desirable. ARES is also used for medical applications and for study and development of accelerator components~\cite{kaiser2024rl}.    \
 
-The project work focuses on the ARES experimental area. The beamline consists of three quadrupole magnets (Q1, Q2, Q3) and 
-two corrector/steering magnets (CV for vertical steering and CH for horizontal steering), and a diagnostic screen where beam properties are measured. The magnets sequence  of ARES Experimental Area, which is a subsection of ARES is depicted in figure \ref{fig:ares_lattice} where two quadrupole magnets (Q1 and Q2) are followed by the vertical corrector magnet (CV), then the third quadrupole magnet (Q3) 
-and finally the horizontal corrector magnet (CH) before reaching the screen. Each magnet is separated by a drift space ($d_1$, $d_2$, $d_3$, $d_4$, $d_5$, $d_6$) each having lengths within the range of 0.175 to 0.450 meters.
+This project work focuses on ARES experimental area. The beamline consists of three quadrupole magnets (Q1, Q2, Q3) and 
+two corrector/steering magnets (CV for vertical steering and CH for horizontal steering), and a diagnostic screen where beam properties are measured. The magnets sequence  of ARES Experimental Area, which is a subsection of ARES is depicted in figure \ref{fig:ares_lattice}, where two quadrupole magnets (Q1 and Q2) are followed by the vertical corrector magnet (CV), then the third quadrupole magnet (Q3) 
+and finally the horizontal corrector magnet (CH) before reaching the screen. Each magnet is separated by a drift space ($d_1$, $d_2$, $d_3$, $d_4$, $d_5$, $d_6$) each having lengths within the range of \SI{0.175}{m} to \SI{0.450}{m}.
 
 
 
@@ -238,27 +238,27 @@ and finally the horizontal corrector magnet (CH) before reaching the screen. Eac
 
 % Quadrupole Q1
 \node[magnet] (Q1) at (1.5,0) {Q1};
-\node[above=0.2cm of Q1, param] {$k_1$};
+\node[above=0.2cm of Q1, param] {$k_{q1}$};
 \node[below=0.4cm of Q1, elemname] {AREAMQZM1};
 
 % Quadrupole Q2
 \node[magnet] (Q2) at (3.5,0) {Q2};
-\node[above=0.2cm of Q2, param] {$k_1$};
+\node[above=0.2cm of Q2, param] {$k_{q2}$};
 \node[below=0.4cm of Q2, elemname] {AREAMQZM2};
 
 % Corrector CV
 \node[magnet] (CV) at (5.5,0) {CV};
-\node[above=0.2cm of CV, param] {$\theta_v$};
+\node[above=0.2cm of CV, param] {$\theta_{cv}$};
 \node[below=0.4cm of CV, elemname] {AREAMCVM1};
 
 % Quadrupole Q3
 \node[magnet] (Q3) at (7.5,0) {Q3};
-\node[above=0.2cm of Q3, param] {$k_1$};
+\node[above=0.2cm of Q3, param] {$k_{q3}$};
 \node[below=0.4cm of Q3, elemname] {AREAMQZM3};
 
 % Corrector CH
 \node[magnet] (CH) at (9.5,0) {CH};
-\node[above=0.2cm of CH, param] {$\theta_h$};
+\node[above=0.2cm of CH, param] {$\theta_ch$};
 \node[below=0.4cm of CH, elemname] {AREAMCHM1};
 
 % Screen
@@ -282,14 +282,14 @@ and finally the horizontal corrector magnet (CH) before reaching the screen. Eac
 
 
 All magnets have polarity-switchable power supplies. It is possible to actuate the quadrupole magnets 
-upto a 72 $m^{-2}$ field strength. The steering/corrector magnets have a limit of 6.2 mrad. The camera's field of view is approximately 8 mm by 5 mm, with a pixel resolution of 2448 by 2040. The scintillating screen's effective resolution is about 20 $\mu$m~\cite{kaiser2024rl}. 
-The beam tuning task involves optimizing the five magnets defined as,
+upto a \SI{72}{m^{-2}} field strength. The steering/corrector magnets have a limit of \SI{6.2}{mrad}. The camera's field of view is approximately \SI{8}{mm} by \SI{5}{mm}, with a pixel resolution of 2448 by 2040. The scintillating screen's effective resolution is about \SI{20}{\mu}m~\cite{kaiser2024rl}. 
+The beam tuning task involves optimising the five magnets defined as,
 \begin{equation}
     \label{eq_magnets}
-    \mathbf{u} = (k_{Q1}, k_{Q2}, \theta_{CV}, k_{Q3}, \theta_{CH}),
+    \mathbf{u} = (k_{q1}, k_{q2}, \theta_{cv}, k_{q3}, \theta_{ch}),
 \end{equation}
 
-where $\mathbf{u} \in \mathbb{R}^5$. In order to produce a focused and centred beam at screen, The measured observables are beam’s 
+where $\mathbf{u} \in \mathbb{R}^5$. In order to produce a focused and centred beam at screen, the measured observables are beam’s 
 horizontal and vertical positions ($\mu_x$ and $\mu_y$) and sizes ($\sigma_x$ and $\sigma_y$). The objective 
 function used throughout this work is
 \begin{equation}
@@ -298,12 +298,12 @@ function used throughout this work is
 \end{equation}
 
 which is the mean absolute error which combines both centering and 
-focusing of the beam into a single metric to minimise. Where $\sigma_x$ and $\sigma_y$ are strictly positive since they are beam size. In a real world accelerator, the quadrupole magnets are never exactly aligned; 
+focusing of the beam into a single metric to minimise. Where $\sigma_x$ and $\sigma_y$ are strictly positive, since they are beam sizes. For the target beam parameters, we consider all targets to be zero $(0,0,0,0)$. In a real world accelerator, the quadrupole magnets are never exactly aligned, 
 the precise beam distribution entering the experimental area is not known. Even with the corrector magnets set to zero, 
-a misaligned quadrupole with transverse offset ($\Delta_x$, $\Delta_y$) partially functions as steering element eventually 
-diverting the beam. These misalignments are not directly measurable during operation. By treating the six misalignments parameters ($\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$) 
+a misaligned quadrupole with transverse offset ($\Delta_x$, $\Delta_y$) partially functions as steering element,
+deflecting the beam. These misalignments are not directly measurable during operation. By treating the six misalignment parameters ($\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$) 
 as trainable quantities within the physics-informed prior, our approach addresses this issue too for the prior mismatched scenario
-and allows the model to adjust to actual accelerator settings using the optimization data. 
+and allows the model to adjust to actual accelerator settings using the optimisation data. 
 
 
 

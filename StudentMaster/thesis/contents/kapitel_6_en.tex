@@ -5,31 +5,29 @@ immediate next steps to longer term research questions. The most obvious next st
 to test the whole implementation on the real ARES accelerator rather than in simulation.  
 A real machine could bring things that a simulator cannot completely capture, 
 like measurement noise, small differences between cheetah model and actual machine etc. 
-Since Xopt already supports a real hardware interface, the only modifications would be 
-to replace the simulated evaluation function with a live one. Another interesting step 
+ Another interesting step 
 for the future work could be to convert the code into a Python package. 
-The system is currently tailored to the ARES, with hardwired magnets names, lattice file, 
-and misalignments. But the idea of picking a cheetah lattice, tuning, learning and running BO 
+The system is currently tailored to ARES Experimental Area, with hardwired magnets names, lattice file, 
+and misalignment values. But the idea of picking a cheetah lattice, tuning, learning and running BO 
 itself is not specific to any one beamline, so packaging it up with a cleaner interface would 
-make it much easier for others to try on their own accelerators without having to dig through 
-ARES specific scripts. \
+make it much easier for others to try on their own accelerators.  \
 
 Currently, each time the optimzer runs, it starts fresh, but in real accelerators the machine does not change drastically between the tuning
 sessions, The learned misalignment values and GP hyperparameters could be used as warm start for the next,
 potentially speeding up the convergence even further. So it would be worth having a look into it more. 
-Some other research direction that could push this project work further for future work could be 
-tuneable parameters increments. The ARES problem only has 5 tuneable parameters that were the 5 magnets, 
-but a real beamline can have dozens of them At such scale the GP gets expensive and it gets 
-harder for acquisition function to search, so combining the cheetah prior with dimensionality 
+Some other research direction that could push this project further for future work could be 
+tunable parameters increment. The ARES problem only has 5 tunable parameters that were the 5 magnets, 
+but a real beamline can have dozens of them. At such scale, GP gets expensive and it gets 
+harder for acquisition function to search, so combining Cheetah prior with dimensionality 
 reduction techniques would be worth exploring. 
 
 
 The current project uses objective function that combines beam position and size into a single MAE metric.
 In some operational scenarios, it might be more natural to treat these as separate objectives 
-(centering the beam and focusing the beam) and use mutli-objective BO instead of combining everything to a single MAE,
+(centering the beam and focusing the beam) and use multi-objective BO instead of combining everything to a single MAE,
 so this could be another direction to experiment. Furthermore, on the modeling side, only the quadrupole misalignments were learned in this project, 
 but there could also be other sources mismatched/unknown in the real machine, like incoming 
 beam distribution may not be perfectly known, thus experiments can be conducted 
 to learn other unknown parameters as well. Finally, the tests could also be conducted on more advanced beamlines with more 
-complex objectives like the ones used in European XFEL and PETRA III. 
+complex objectives like the ones used in European XFEL. 
 

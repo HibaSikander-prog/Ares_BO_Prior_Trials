@@ -1,13 +1,13 @@
 Tuning particle accelerators is an expensive and time consuming challenge that causes limitations in the findings of advanced research facilities. 
-Bayesian Optimization (BO) has shown potential to be a promising approach for autonomous tuning of accelerators, yet its effectiveness diminishes 
-for higher dimensional problems. Recent studies have proposed replacing the zero mean prior in BO with physics informed prior models to leverage physics 
-domain knowledge. The Cheetah framework, a high-speed differentiable simulator, was demonstrated as a physics-informed BO prior on a simple two dimensional 
-FODO lattice. This project work extends that approach to a real world five dimensional problem, which is the transverse beam parameter optimization 
+Bayesian Optimisation (BO) has shown potential to be a promising approach for autonomous tuning of accelerators, yet its effectiveness diminishes 
+for higher dimensional problems. Recent studies have proposed replacing the zero mean prior in BO with physics-informed prior models to leverage physics 
+domain knowledge. Cheetah framework, a high-speed differentiable simulator, was demonstrated as a physics-informed BO prior on a simple two dimensional 
+FODO lattice. This project work extends that approach to a real world five dimensional problem, which is the transverse beam parameter optimisation 
 at ARES Experimental Area involving three quadrupole magnets and two corrector magnets. This project implements a framework that incorporates Cheetah as the Gaussian 
-Process mean function into the Xopt optimization toolset with trainable misalignment parameters that enable the prior to adjust when the simulator does not accurately 
-represent the real system. Four optimization approaches(BO matched prior, BO mismatched prior, standard BO and Nelder-Mead) are evaluated. The results show
+Process mean function into the Xopt optimisation toolset with trainable misalignment parameters that enable the prior to adjust when the simulator does not accurately 
+represent the real system. Four optimisation approaches(BO matched prior, BO mismatched prior, standard BO and Nelder-Mead) are evaluated. The results show
 that both physics-informed BO variants consistently achieve better performance in fewer iterations than both baseline methods, with
 the matched prior yielding the best overall performance across all evaluated metrics and 
 BO with physics-informed prior remains effective even under prior-model mismatch. By significantly reducing the time and effort
-required for beam tuning, this work enables particle accelerator facilites to dedicate more time to experiments, persue a wider range of research objectives and ultimately enhance their contribution to 
+required for beam tuning, this work enables particle accelerator facilites to dedicate more time to experiments, persue a wider range of research and ultimately enhance their contribution to 
 more scientific progress.

@@ -1,34 +1,30 @@
 \section{Conclusion and Outlook}
 
-The central question behind this project work was to find out whether a differentiable physics simulator, 
-used as the prior mean in Bayesian Optimization, can actually help with a realistic accelerator tuning problem(ARES Experimental Area) 
-or does it only work on a toy example(FODO lattice)? Based on everything presented, including implementation, experiments and the results, it can confidently be said "yes". \
+The central question behind this project work is to find out whether a differentiable physics simulator, 
+used as the prior mean in bayesian optimisation (BO), can actually help with a realistic accelerator tuning problem (ARES Experimental Area), 
+or does it only work on a toy example (FODO lattice)? Based on everything presented, including implementation, experiments and the results, it can confidently be said "yes".
+The problem tackled in this project is the transverse beam tuning task
+at ARES Experimental Area, the idea of Cheetah-based prior demonstrated on a simple two-dimensional FODO lattice~\cite{kaiser2024bridging} 
+is scaled up to a five-dimensional beam tuning task under this project scope, which includes 5 tunable magnets (three quadrupoles and two correctors), six unknown quadrupole
+misalignment values that the prior had to learn during optimisation and an objective that asks the
+optimiser to focus and centre the beam simultaneaously. 
+The code is built around a class \texttt{AresPriorMean}, that
+wraps Cheetah and plugs it into the Xopt framework. The approach is tested against three experimental conditions. The matched scenario, where
+the prior already knows the correct and ideal system state, the mismatched case, where wrong prior is given on purpose, 
+forcing it to learn  the correct values during optimisation, and the matched\_prior\_newtask
+scenario, where all settings (beam and  quadrupole misalignment values) are same as mismatched case, but the correct prior is given upfront. For experiments conducted under this project work, the third scenario is considered the actual matched case.
+Both Cheetah-based BO were compared against two baseline techniques, the standard BO with zero prior and Nelder-Mead Simplex. 
 
-The problem tackled in this project was the tranverse beam tuning task
-at the ARES Experimental Area, the idea of Cheetah based prior demonstrated on a simple two dimensional FODO lattice \cite{kaiser2024bridging} 
-was scaled up to a five dimensional beam tuning task now under this project scope, including 5 tuneable magnets (three quadrupole
-magnets and two corrector magnets), six unknown quadrupole
-misalignment values that the prior had to learn during the optimization and a four components based objective that asks
-optimizer to focus and centre the beam simultaneaously. 
-The code was built around a module \texttt{AresPriorMean} that
-wraps the Cheetah differentiable simulator and plugs into the Xopt framework. The project contains a modular codebase architecture, with
-clean separation between the prior mean function, the optimization loop, evaluation and plotting. The approach was tested against three experimental conditions. In the matched scenario,
-the prior already knows the correct system state, which is the best-case scenario. 
-In the mismatched case, the modified beam and wrong misalignment values were given to prior on purpose, 
-forcing it to learn  the correct values during optimization. And in the matched\_prior\_newtask
-scenario, the correct misalignment values were given upfront, which was the matched case for evaluation and comparison purposes under this project.
-Both Cheetah prior based BO were compared against two baseline techniques, the standard BO
-with an uninformed prior and Nelder-Mead. 
+The results confirm that using physics-informed prior in BO, significantly improves the performance. Both the BO prior variants (matched and mismatched) achieved a median Best MAE of \SI{5.75}{\mu}m and \SI{6.71}{\mu}m respectively, which is significantly better than standard BO (45.88$\mu$m) and Nelder-Mead(67.13$\mu$m).
+BO with both matched and mismatched prior also achieved better Final MAE compared to baseline methods, with a median of \SI{42.60}{\mu}m and \SI{40.54}{\mu}m respectively, while standard BO and Nelder-Mead had a median Final MAE of \SI{147.96}{\mu}m and \SI{67.84}{\mu}m respectively.
+The matched prior hit the 40$\mu$m target in a median of 4 steps, the mismatched prior in 10.5, whereas standard BO required 82.5 steps on rare occasions (20\% success rate) and 
+Nelder-Mead never reached the target. What makes the approach especially promising for real world use is its robustness. Even when starting with incorrect misalignment values 
+and modified beam distribution, the prior still outperformed the standard BO and reached on a comparable level as the matched prior scenario 
+of BO very soon within 15-20 iterations. The trainable misalignment parameters successfully converged very close to the ground truth purely from optimisation data, which means that the method does 
+not just tune the beam but it also learns something about the machine's physical state along the way.  \
 
-The results speak for themselves. Both the physics informed BO variants (matched and mismatched) achieved a median MAE of 6.22$\mu$m and 6.49$\mu$m respectively, which is significantly higher than standard BO (45.88$\mu$m) and Nelder-Mead(67.13$\mu$m).
-The matched prior hit the 40$\mu$m target in a median 4 steps, the mismatched prior in 14, whereas standard BO required 82.5 steps on a rare occasions (20\% success rate) and 
-Nelder-Mead never reached the target. What makes the approach especially promising for real world use is its robustness. Even when starting with incorrect misalignments values 
-and modified beam distribution (the mismatched prior in BO case), the prior still outperformed the uninformed zero mean prior (standard BO) and caught up to the perfectly matched prior scenario 
-of BO very soon within 15-20 iterations. The trainable misalignment parameters successfully converged very close to the ground truth purely from optimization data, which means that the method does 
-not just tune the beam but it also learns something about the machine’s physical state along the way.  \
-
-Ofcourse, the ARES Experimental Ares with its five tuneable parameters is still a relatively small problem compared to large-scale facilities like European XFEL and PETRA III, 
-but this is a significant step forward from the two dimensional FODO lattice that was previously tested to evaluate cheetah’s potential. The fact that the method scales gracefully 
+Ofcourse, the ARES Experimental Area is still a relatively small problem compared to large-scale facilities like European XFEL, 
+but this is a significant step forward from the two-dimensional FODO lattice that is previously tested to evaluate cheetah's potential. The fact that the method scales gracefully 
 to this level sends quite good signs for scaling further and handling more complex beamlines in future. 
 
 

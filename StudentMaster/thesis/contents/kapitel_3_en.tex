@@ -1,15 +1,15 @@
 \section{Implementation}	\label{a:ab_rts_en}
 
-This chapter covers the implementation of Bayesian optimization with a Cheetah-based physics-informed prior for the transverse beam tuning at the ARES Experimental Area. 
+This chapter covers the implementation of BO with a Cheetah-based physics-informed prior for the transverse beam tuning at the ARES Experimental Area. 
 Instead of being one large script, the implementation code is systematically divided into Python modules, each having their distinct functions:
 \begin{itemize}
     \item \textbf{\texttt{bo\_cheetah\_prior\_ares.py}} includes the simulated ARES environment \texttt{ares\_problem()} and the GPyTorch compatible prior mean class \texttt{AresPriorMean} with its trainable  misalignment parameters. This is where most of the physics lives.
-    \item \textbf{\texttt{eval\_ares.py}} constructs the optimizers (Standard BO, BO with Cheetah prior and Nelder-Mead) along with the experimental scenarios (matched, mismatched and matched\_prior\_newtask) and loops through the optimization trials. 
-    \item \textbf{\texttt{eval\_ares\_metrics.py}} in accordance with the evaluation process \cite{kaiser2024rl}, it calculates the performance metrics used to compare the techniques. 
+    \item \textbf{\texttt{eval\_ares.py}} constructs the optimisers (Standard BO, BO with Cheetah prior and Nelder-Mead) along with the experimental scenarios (matched, mismatched and matched\_prior\_newtask) and loops through the optimisation trials. 
+    \item \textbf{\texttt{eval\_ares\_metrics.py}} it computes the performance metrics and generates a final csv with all the metrics to compare the techniques. 
     \item \textbf{\texttt{plot\_ares\_results.py}} generates plots for the results. 
 \end{itemize}
 
-The plotting and metrics modules are then connected by the fifth script \textbf{\texttt{run\_evaluation.py}} to run altogether, it can also generate result tables in LaTex format. Table \ref{table:libraries} shows the summary of primary libraries used. 
+The plotting and metrics modules are then connected by the fifth script \textbf{\texttt{run\_evaluation.py}} to run altogether. Table \ref{table:libraries} shows the summary of primary libraries used. 
 
 \begin{table} [htbp]
     \centering
@@ -19,9 +19,9 @@ The plotting and metrics modules are then connected by the fifth script \textbf{
         \textbf{Libraries} & \textbf{Purpose} & \textbf{Version} \\
         \midrule
         \texttt{Cheetah} & PyTorch based differentiable beam tracking simulator. & 0.8.0 \\
-        \texttt{GPyTorch} & Gaussian process framework, base class for prior mean module & 1.14.2 \\ 
+        \texttt{GPyTorch} & Gaussian process framework, base class for prior mean module. & 1.14.2 \\ 
         \texttt{Xopt} & BO loop, UCB acquisition Nelder-Mead baseline. & 2.6.7 \\ 
-        \texttt{BoTorch} & BO primitives used internally by Xopt & 0.16.0 \\ 
+        \texttt{BoTorch} & BO primitives used internally by Xopt. & 0.16.0 \\ 
         \bottomrule
     \end{tabular}
     \caption{Primary libraries/frameworks used.}
@@ -29,20 +29,19 @@ The plotting and metrics modules are then connected by the fifth script \textbf{
 \end{table}
 
 \subsection{Initial Setup}
-Before running any optimizers, we need something to optimize against. Defined in \texttt{bo\_cheetah\_prior\_ares.py}, 
-the method \texttt{ares\_problem()} fulfills this purpose. A beam is propagated across a Cheetah model of the ARES experimental 
-area using a set of magnet parameters, and the beam quality is then returned. In practice, every call to this function 
+Before any optimiser, we need something to optimise against, \texttt{bo\_cheetah\_prior\_ares.py} contains
+the method \texttt{ares\_problem()} which fulfills this purpose. A beam is propagated across a Cheetah model of the ARES Experimental 
+Area using a set of magnet parameters, and the beam quality is then returned. In practice, every call to this function 
 mimics what would happen if the user adjusted the magnet settings on the real machine and then looked at the diagnostic screen. \
 
-In this project, Cheetah's \texttt{ParameterBeam} is used to describe the beam entering the ARES Experimental Area. \texttt{ParameterBeam} was used 
-simply because it is faster, which enables it to run the experiments more quickly and iterate on the implementation with shorter turnaround times.
- Also note that Cheetah's \texttt{ParticleBeam} could have also been just as well but with more computational cost. Since speed is not the most critical 
+In this project, Cheetah's \texttt{ParameterBeam} is used to describe beam entering the ARES Experimental Area. It is used 
+simply because it is faster, which enables to run the experiments more quickly and iterate on the implementation with shorter turnaround times.
+ Also, note that Cheetah's \texttt{ParticleBeam} could have also been just as well but with more computational cost. Since speed is not the most critical 
  concern in this project, there is nothing holding us back from using either representation for this application. The ARES experimental area only 
- involves linear optics, so both approaches get equivalent results. These values match the typical ARES operating conditions, with a beam energy of 
- around 107 MeV and transverse sizes of 200 $\mu$m.
+ involves linear optics, so both approaches get equivalent results. These values match the typical ARES operating conditions.
 
 A JSON file describing the full ARES accelerator is used to load the lattice itself. The code extracts the sub-segment between AREASOLA1 (marker) and AREABSCR1 (screen) 
-as we only require the experimental ares. Listing \ref{code:ares_loading} demonstrates the loading of the lattice and the assignment of the five magnet parameters prior to tracking.
+as only ARES Experimental Area is required. Listing \ref{code:ares_loading} demonstrates the loading of the lattice and the assignment of the five magnet parameters prior to tracking.
 
 
 \lstset{language=Python,
@@ -87,32 +86,23 @@ out_beam = ares_ea(incoming_beam)
 \end{lstlisting}
 
 For the three quadrupole strengths ($k^{Q1}$, $k^{Q2}$, $k^{Q3}$) and corrector angles ($\theta^{CV}$ and $\theta^{CH}$), we have reduced the range from physical magnet's 
-$\pm72 m^{-2}$ to our simulation's $\pm30 m^{-2}$, and from $\pm 6.2 mrad$ to $\pm 6.0 mrad$ respectively because the optimization consistently converges well within the narrower range
+\SI{\pm72}{m^{-2}} to our simulation's \SI{\pm30}{m^{-2}}, and from \SI{\pm6.2}{mrad} to \SI{\pm6.0}{mrad} respectively because the optimisation consistently converges well within the narrower range
 and exploring beyond it offers no practical benefit to the tuning process, since during practical operation, these ranges are usually never exceeded. The code iterates through the dictionary and applies each ($\Delta_x, \Delta_y$) pair to the corresponding 
 quadrupoles when a misaligned configuration is provided. This enables us to model the realistic scenario in which magnets are not perfectly 
-centred on the beam. To let the optimizer know how good or bad the result is, we need a single number. Following the previous FODO demonstration \cite{kaiser2024bridging}, for ARES Experimental Area, we use the mean absolute error as objective function, including each of the four beams observable, defined as
-
-\begin{equation}
-\label{mae_repeated}
- mae = 0.25(|\mu_x|+\sigma_x+|\mu_y| + \sigma_y), 
-\end{equation}
-
-
-with $\mu_x$ and $\mu_y$ being the beam positions (ideally, zero means beam is centred) and $\sigma_x$ and $\sigma_y$ being the beam sizes (the smaller the better), simultaneously centering and focusing the beam. 
-The implementation is straight forward. The function also returns the individual beam parameters in addition to MAE so that they can be logged for later analysis.
+centred on the beam. To let the optimiser know how good or bad the result is, we need a single number. Following the previous FODO demonstration \cite{kaiser2024bridging}, for ARES Experimental Area, we use the mean absolute error as objective function defined in Equation \ref{eq_ares_ob}, including each of the four beams observable, with $\mu_x$ and $\mu_y$ being the beam positions (ideally, zero means beam is centred) and $\sigma_x$ and $\sigma_y$ being the beam sizes (the smaller the better), simultaneously centering and focusing the beam. The function also returns the individual beam parameters in addition to MAE so that they can be logged for later analysis.
 
 \subsection{Physics-Informed Prior Mean Module}
-The heart of this project work is the \texttt{AresPriorMean}, defined in \texttt{bo\_cheetah\_prior\_ares.py}. 
-Its role is to turn the Cheetah simulation into a format that GPyTorch can use as the mean function of the Gaussian Process. 
+The heart of this project work is \texttt{AresPriorMean}, defined in \texttt{bo\_cheetah\_prior\_ares.py}. 
+Its role is to turn the Cheetah simulation into a format that GPyTorch can use as the mean function of GP. 
 Instead of using GP prior (typically with zero mean assumption), it begins with the best estimates from the physics model and 
-just needs to learn the residual which is the difference between what the simulator predicts and what is actually observed. \
+just needs to learn the residual, which is the difference between what the simulator predicts and what is actually observed. \
 
 \texttt{AresPriorMean} class specifically inherits from \texttt{gpytorch.means.Mean} and implements a \texttt{forward()} method. 
 Everytime GPyTorch needs the prior mean at a set of input points, it calls this method. The remaining GP components, such as kernel evaluation, 
-posterior conditioning and acquisition function optimization, perform exactly like they would with any other mean function. 
+posterior conditioning and acquisition function optimisation, perform exactly like they would with any other mean function. 
 Another important aspect is that Xopt builds the input tensor for the GP by sorting variables in alphabetical order, which means that since our 
-magnets variables are named $q1$, $q2$, $cv$, $q3$ and $ch$, column 0 of the tensor would  always be $ch$, not $q1$ as one might expect from the beamline order. 
-In order to avoid silently feeding the wrong values to incorrect magnets, the class defines explicit index constants (Listing \ref{code:xopt_indexing}).
+magnet variables are named $q1$, $q2$, $cv$, $q3$ and $ch$, column 0 of the tensor would  always be $ch$, not $q1$ as one might expect from the beamline order. 
+Listing \ref{code:xopt_indexing} shows how the class defines explicit index constants in order to avoid silently feeding the wrong values to incorrect magnets.
 
 \begin{lstlisting}[caption={Explicit indexing to ensure correct mapping in Xopt input tensor.}, label={code:xopt_indexing}]
 
@@ -130,9 +120,9 @@ class AresPriorMean(Mean):
 As discussed earlier, in real accelerators, the quadrupole magnets are never perfectly aligned. A magnet that is even with a fraction of a millimeter, 
 deflects the beam in a way that would not be predicted by a perfectly aligned simulation, partially acting as a steering factor.  
 In order to handle this, the prior module treats the quadrupole misalignments as learnable parameters ($\Delta_{xQ1}$, $\Delta_{yQ1}$, $\Delta_{xQ2}$, $\Delta_{yQ2}$, $\Delta_{xQ3}$, $\Delta_{yQ3}$).
-Each of the three quadrupoles has horizontal and vertical misalignment values, making a total of six values. In order to do online system identification, GPyTorch’s marginal likelihood maximization 
-adjusts these values in addition to the standard GP hyperparameters as the optimizer collects data. Three coordinated layers are used in GPyTorch to register each misalignment parameter, these three 
-layers are summarized in table \ref{three_layers}. On top of this, $@property$ accessors offer a convenient interface, reading a misalignment property applies the forward transform (raw to constrained) and when 
+Each of the three quadrupoles have their respective horizontal and vertical misalignment values, making a total of six values. In order to do online system identification, GPyTorch’s marginal likelihood maximization 
+adjusts these values in addition to the standard GP hyperparameters as the optimiser collects data. Three coordinated layers are used to register each misalignment parameter, these three 
+layers are summarized in Table \ref{three_layers}. On top of this, $@property$ accessors offer a convenient interface, reading a misalignment property applies the forward transform (raw to constrained) and when 
 it is written, the inverse transform is applied. This three layer pattern is repeated identically for each of the six parameters.  The constructor is fairly lengthy because of this six times repeated 
 pattern, although a loop based factory would have been cleaner, but we go with the explicit version since it has the advantage of being easy to read and to debug. 
 
@@ -143,34 +133,33 @@ pattern, although a loop based factory would have been cleaner, but we go with t
         \toprule
         \textbf{Component} & \textbf{GPyTorch API} & \textbf{What it does} \\
         \midrule
-        Raw Parameter & \texttt{register\_parameter()} & A raw unconstrained \texttt{nn.Parameter} is created at first, which is what PyTorch’s optimizer updates directly.\\
-        Interval Constraint & \texttt{register\_constraint()} & Secondly, an interval constraint is used that maps this raw value through a sigmoid based transformation into the physically meaningful range of $\pm0.5mm$, this serves as the bound guaranteeing that the learnt offset can never be greater than what is practical for quadrupole misalignments. \\ 
-        Smoothed box prior & \texttt{register\_prior()} & Third, a \texttt{SmoothBoxPrior} is registered across the confined space, adding a soft regularization on top of the hard constraint. This helps the optimizer avoid getting stuck at the boundaries by gently penalizing values near the edges while assigning a fairly uniform probability throughout the interval. \\ 
+        Raw Parameter & \texttt{register\_parameter()} & A raw unconstrained \texttt{nn.Parameter} is created at first, which is what PyTorch’s optimiser updates directly.\\
+        Interval Constraint & \texttt{register\_constraint()} & Secondly, an interval constraint is used that maps this raw value through a sigmoid based transformation into the physically meaningful range of \SI{\pm0.5}{mm}, this serves as the bound guaranteeing that the learnt offset can never be greater than what is practical for quadrupole misalignments. \\ 
+        Smoothed box prior & \texttt{register\_prior()} & Third, a \texttt{SmoothBoxPrior} is registered across the confined space, adding a soft regularization on top of the hard constraint. This helps the optimiser avoid getting stuck at the boundaries by gently penalizing values near the edges while assigning a fairly uniform probability throughout the interval. \\ 
         \bottomrule
     \end{tabular}
     \caption{Three layered pattern to register misalignments as trainable parameters.}
     \label{three_layers}
 \end{table}
 
-When GPyTorch calls \texttt{forward()}, the method recieves a tensor X whose last dimension contains 5 columns (the five magnets, in alphabetical order), the steps include:
+When \texttt{forward()} method is called, it recieves a tensor X whose last dimension contains 5 columns (the five magnets, in alphabetical order), the steps include:
 \begin{enumerate}
     \item Using the index constants from Listing \ref{code:xopt_indexing}, slice out each magnet parameter. 
     \item Assign them to corresponding components of Cheetah lattice.
     \item Apply the current misalignment values to the three quadrupoles by stacking them.
     \item Run the beam through the lattice
-    \item Return the MAE (Equation \ref{mae_repeated}).
+    \item Return the MAE (Equation \ref{eq_ares_ob}).
 \end{enumerate}
 Since all of these operations (the beam tracking, the absolute values, and the summation) are native PyTorch operations, the full forward pass is differentiable. 
-Gradients could flow backward through the simulator and into the six misalignment parameters, which is what allows the joint optimization of both misalignment 
+Gradients could flow backward through the simulator and into the six misalignment parameters, which is what allows the joint optimisation of both misalignment 
 values as well as usual GP hyperparameters.
 
-\subsection{Optimization Runner}
+\subsection{Optimisation Runner}
 
 After setting up the environment and the prior setup, the remaining part is the runner that actually executes the experiments. This is handled by an \texttt{eval\_ares.py} file 
-that takes arguments for the experimental scenarios (matched, mismatched, matched\_prior\_newtask), the number of trials, the evaluation budget and the type of optimizer (BO, BO\_prior, NM) 
-where BO is the standard Bayesian Optimization, BO\_prior is Bayesian Optimization with physics prior and NM is Nelder-Mead. Xopt defines the optimization problem declaratively using a 
-YAML based specification known as VOCS (Variable and Objective Configuration Specification). Listing \ref{code:VOCS_configuration}  shows the five variables and the single objective. Where the unit for quadrupole magnet
-ranges are $m^{-2}$, for corrector magnets ranges are $rad$ and for objective (mae) is metre($m$)
+that takes arguments for the experimental scenarios (matched, mismatched, matched\_prior\_newtask), the number of trials, the evaluation budget and the type of optimiser (BO, BO\_prior, NM) 
+where BO is the standard Bayesian Optimisation, BO\_prior is Bayesian Optimisation with physics prior and NM is Nelder-Mead. Xopt defines the optimisation problem declaratively using a 
+YAML based specification known as VOCS (Variable and Objective Configuration Specification). Listing \ref{code:VOCS_configuration}  shows the five magnet's ranges and a single objective.
 
 
 \begin{lstlisting}[caption={VOCS configuration.}, label={code:VOCS_configuration}]
@@ -188,11 +177,11 @@ vocs_config = """
 \end{lstlisting}
 
 To test the prior under various conditions, the runner supports three scenarios given below, 
-they are also summarized in Table \ref{table:scenarios_summary}:
+they are also summarised in Table \ref{table:scenarios_summary}:
 
 \begin{enumerate}
-    \item \textbf{Matched Scenario:} This is the most simple and ideal scenario where the beam and misalignments in the environment are exactly what the prior expects, the default values (including all misalignment values to be zero), thus the physics model perfectly matches reality. This scenario exists mainly to verify that the implementation works correctly and to see how much the prior helps when it is perfectly accurate since there is no model reality gap at all. In practice, this situation never happens on a real machine. 
-    \item \textbf{Mismatched Scenario:} In this scenario, a gap is introduced on purpose to create mismatch between the prior and the reality, a different beam ($\sigma_y$ changed from 200$\mu$m to 100$\mu$m), and non zero misalignment values over all three quadrupoles are used in the environment(Table \ref{table:misalignment_groundtruth}). The prior, however, starts from the default beam and zero misalignments as it does not know about any of these changes. We tell Xopt to include the six misalignment parameters in the GP’s marginal likelihood optimization by setting \texttt{trainable\_mean\_keys=["mae"]} in the \texttt{StandardModelConstructor} so they can be learned from data as it is received. This is the scenario that tests whether online systems identification actually works. 
+    \item \textbf{Matched Scenario:} This is the most simple and ideal scenario where the beam and misalignments in the environment are exactly what the prior expects, which are the default values (including all misalignment values to be zero). Thus, physics model perfectly matches the reality. This scenario exists mainly to verify that the implementation works correctly and to see how much the prior helps when it is perfectly accurate since there is no model reality gap at all. In practice, this situation never happens on a real machine. 
+    \item \textbf{Mismatched Scenario:} In this scenario, a gap is introduced on purpose to create mismatch between the prior and the reality, a different beam ($\sigma_y$ changed from \SI{200}{\mu}m to \SI{100}{\mu}m), and non zero misalignment values over all three quadrupoles are used, shown in Table \ref{table:misalignment_groundtruth}. The prior, however, starts from the default beam and zero misalignments as it does not know about any of these changes. We tell Xopt to include the six misalignment parameters in the GP’s marginal likelihood optimisation by setting \texttt{trainable\_mean\_keys=["mae"]} in the \texttt{StandardModelConstructor} so they can be learned from data as it is received. This is the scenario that tests whether online systems identification actually works. 
      \begin{table} [htbp]
     \centering
     \small
@@ -210,26 +199,26 @@ they are also summarized in Table \ref{table:scenarios_summary}:
 \end{table}
 
 
-    \item \textbf{Matched\_prior\_newtask Scenario:} The simulated accelerator setup is the same as in the mismatched scenario (modified beam and non-zero misalignments), but this time the prior is initialised with the correct values which are the right beam parameters and the true misalignment values. So this way, we are handing the prior a perfectly adjusted physics model and asking how fast can the optimizer converge when it already knows the true system’s state, compared to having to learn it during the process.
+    \item \textbf{Matched\_prior\_newtask Scenario:} The simulated accelerator setup is the same as in the mismatched scenario (modified beam and non-zero misalignments), but this time the prior is initialised with the correct values which are the right beam parameters and the true misalignment values. So this way, we are handing the prior a perfectly adjusted physics model and asking how fast can the optimiser converge when it already knows the true system’s state, compared to having to learn it during the process.
 \end{enumerate}
 
 For the evaluation in this project, the matched\_prior\_newtask serves as our actual matched case, since it uses the realistic 
 accelerator setup having modified beam and misalignments rather than the ideal zero misalignment defaults. We compare four methods, 
 Nelder-Mead, Standard BO (zero mean), BO with Cheetah prior (mismatched scenario) and BO with Cheetah prior (matched\_prior\_newtask scenario). 
-All four approaches face the same simulated accelerator so that the comparison is fair,  what differs between them is only the optimization strategy, 
+All four approaches face the same simulated accelerator so that the comparison is fair,  what differs between them is only the optimisation strategy, 
 and in case of prior informed methods, how much the prior knowledge is available from the start for each method. 
 
 
 
-Three optimizers are compared Listing \ref{code:mismatched_setup} shows how the most complex one (BO with mismatched prior) is set up.
-the other two are the simpler subsets of the same pattern. 
+Listing \ref{code:mismatched_setup} shows how the most complex one (BO with mismatched prior) is set up.
+the others (NM, standard BO and BO matched prior) are the simpler subsets of the same pattern. 
 
 \begin{lstlisting}[caption={BO with Cheetah prior(mismatched setup).}, label={code:mismatched_setup}]
 # Create the prior mean module with default
 prior_mean_module = bo_cheetah_prior.AresPriorMean(
                     incoming_beam=incoming_beam
                 )
-                # Initialize misaligments to zero, will be learned
+                # Initialise misaligments to zero, will be learned
                 prior_mean_module.q1_misalign_x = 0.0
                 prior_mean_module.q1_misalign_y = 0.0
                 prior_mean_module.q2_misalign_x = 0.0
@@ -255,7 +244,7 @@ prior_mean_module = bo_cheetah_prior.AresPriorMean(
     \small
     \begin{tabular}{p{2.5cm} p{2.0cm} p{2.0cm} p{2.0cm} p{2.0cm}}
         \toprule
-        \textbf{Scenario} & \textbf{Modified Beam} & \textbf{True Misalignments} & \textbf{Prior Misalignment} & \textbf{Trainable $\phi$} \\
+        \textbf{Scenario} & \textbf{Modified Beam} & \textbf{True Misalignments} & \textbf{Prior Misalignments} & \textbf{Trainable $\phi$} \\
         \midrule
         Matched & --- & --- & --- & --- \\
         Mismatched & $\checkmark$ & $\checkmark$ & 0 & $\checkmark$ \\ 
@@ -274,15 +263,15 @@ In order to have a fair comparison, every trial starts from the same initial poi
 
 After this initial evaluation, the runner loops through the \texttt{xopt.step()} for a fixed number of iterations. 
 The default in the code is 50 steps, but for the evaluation presented in this report, we used 100 steps to give each 
-method more room to converge and to better observe the later stage behaviors of the optimizers. Each step involves 
-fitting the GP to all the data collected so far, selecting the next point by optimizing the UCB acquisition function 
+method more room to converge and to better observe the later stage behaviors of the optimisers. Each step involves 
+fitting the GP to all the data collected so far, selecting next point by optimising the UCB acquisition function 
 and testing that point on the simulated accelerator. In the case of Nelder-Mead, the same \texttt{step()} interface 
 updates the simplex instead. For mismatched scenario when the prior’s misalignment parameters are trainable, fitting 
-the GP also involves optimizing over \textbf{$\phi$}. As a result, each new data point gives the marginal likelihood 
-optimizer more information about where the magnets are actually positioned and the prior gradually gets more accurate 
+the GP also involves optimising over \textbf{$\phi$}. As a result, each new data point gives the marginal likelihood 
+optimiser more information about where the magnets are actually positioned and the prior gradually gets more accurate 
 which is the online system identification already discussed above. After each trial completes, the script stores the 
-full MAE history, the overall best, and the learned misalignment values (where applicable). With a fixed random seed, 
-ten separate trials are conducted per configuration and the results are saved to CSV files for further analysis. 
+full MAE history, the overall best MAE, beam parameters and the learned misalignment values (where applicable). With a fixed random seed, 
+10 separate trials are conducted per configuration and the results are saved to CSV file for further analysis. 
 
 
 
@@ -291,22 +280,21 @@ ten separate trials are conducted per configuration and the results are saved to
 The evaluation code is located in \texttt{eval\_ares\_metrics.py}. 
 For each metric, $i \in \{1,2,\ldots,10\}$, where $i$ denotes the trial index, $t \in \{0,1,\ldots,T\}$, where $t$ is the step (iteration) index and $T$ is the last step which is 100 in our experiments.
 \begin{enumerate}
-    \item \textbf{Best MAE:} is the best (minimum) MAE reached across all steps within each trial, defined as 
+    \item \textbf{Best MAE:} is the best (minimum) mean absolute error (MAE) reached at any step within each trial, defined as 
     \begin{equation}
         \text{Best MAE}^{(i)} = \min_{t \in \{0, 1, \ldots, T\}} \text{MAE}_t^{(i)}.
     \end{equation}
     \item \textbf{Final MAE:} is the MAE at the last step of each trial ($\text{MAE}_T^{(i)}$).
-    \item \textbf{RMSE:} is the root mean square across all iterations within each trial, capturing how quickly the optimizer improves and not just the final value, defined as
+    \item \textbf{RMSE:} is the root mean square error across all iterations within each trial, capturing how quickly the optimiser improves and not just the final value, defined as
     \begin{equation}
         \text{RMSE}^{(i)} = \sqrt{\frac{1}{4(T+1)} \sum_{t=0}^{T} \left( (\mu_x^{(i,t)})^2 + (\mu_y^{(i,t)})^2 + (\sigma_x^{(i,t)})^2 + (\sigma_y^{(i,t)})^2 \right)}.
     \end{equation}
-    \item \textbf{Improvement Best percentage(\%):} is the improvement measured from initial to best mae, computed as $((\text{MAE}_0 - \text{MAE}_{\text{best}})/\text{MAE}_0) \times 100$.
-    \item \textbf{Improvement Final percentage(\%):} is the improvement measured from initial to final mae, computed as $(((\text{MAE}_0 - \text{MAE}_{\text{final}})/\text{MAE}_0) \times 100)$.
+    \item \textbf{Improvement Best percentage(\%):} is the improvement measured from initial to best MAE, computed as $((\text{MAE}_0 - \text{MAE}_{\text{best}})/\text{MAE}_0) \times 100$.
+    \item \textbf{Improvement Final percentage(\%):} is the improvement measured from initial to final MAE, computed as $(((\text{MAE}_0 - \text{MAE}_{\text{final}})/\text{MAE}_0) \times 100)$.
 
-    \item \textbf{Steps to target:} shows how many evaluations does it take to drop below the threshold of 40 $\mu$m of MAE for the first time.
+    \item \textbf{Steps to target:} computes how many evaluations does it take to drop below the threshold of \SI{40}{\mu}m of MAE for the first time, this shows how quickly an optimiser gets the beam into an acceptable state.
     \item \textbf{Success rate:} is the percentage of trials that reach the 40 $\mu$m target within the budget.
 \end{enumerate}
 
-Though all the metrics provide quite good insights, the final error (the best MAE achieved) is the most crucial one for the practical  purposes, 
-and the steps to target are also informative because it tells how quickly the optimizer gets the beam into an acceptable state. \texttt{plot\_ares\_results.py} 
-produces plots and tables, styled to match in \cite{kaiser2024bridging} and \cite{kaiser2024rl}, which can then be seen later under Section 4.  
+The mean, median and standard deviation are computed for each metrics across the 10 trials.
+Metric definition and evaluation are adapted from~\cite{kaiser2024bridging, kaiser2024rl}.
